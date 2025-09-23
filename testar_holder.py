@@ -11,7 +11,7 @@ def holder_mod_fixo_y(campo, x0, y0, xs):
         vals.append(np.sqrt((V0x - Vx)**2 + (V0y - Vy)**2))
     return np.array(vals)
 
-def estima_holder(campo, x0, y0, R, npts=200, plot_testar=False, outdir="plots", N=None):
+def estima_holder(campo, x0, y0, R, npts=250, plot_testar=False, outdir="plots", N=None):
     xs = np.linspace(x0, x0 + R, npts)
     ys = holder_mod_fixo_y(campo, x0, y0, xs)
     rs = np.abs(xs - x0)
@@ -33,7 +33,7 @@ def estima_holder(campo, x0, y0, R, npts=200, plot_testar=False, outdir="plots",
         plt.figure()
         plt.scatter(logr, logd, s=10, label="dados")
         plt.plot(logr, np.polyval(coef, logr), 'r', label=f"ajuste: h≈{h_est:.3f}")
-        # reta de referência h = 1/3
+        
         xm, ym = np.median(logr), np.median(logd)
         plt.plot(logr, ym + (1/3)*(logr - xm), '--', label="h = 1/3 ref")
         plt.xlabel("log |x-x0|")
