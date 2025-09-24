@@ -3,25 +3,35 @@ import numpy as np
 from matplotlib import pyplot as plt
 import os
 
-def holder_mod_fixo_y(campo, x0, y0, xs):
-    V0x, V0y, _, _, _ = campo(x0, y0)
-    vals = []
-    for x in xs:
-        Vx, Vy, _, _, _ = campo(x, y0)
-        vals.append(np.sqrt((V0x - Vx)**2 + (V0y - Vy)**2))
-    return np.array(vals)
 
-def estima_holder(campo, x0, y0, R, npts=250, plot_testar=False, outdir="plots", N=None):
-    xs = np.linspace(x0, x0 + R, npts)
+def holder_mod_fixo_y(campo, x0, y0, xs):
+    # vetor no ponto fixo
+    V0x, V0y, *_ = campo(x0, y0)
+
+    # avalia todos os pontos de uma vez
+    Vx, Vy, *_ = campo(xs, np.full_like(xs, y0))
+
+    # diferenças (já arrays)
+    dx = V0x - Vx
+    dy = V0y - Vy
+
+    # norma
+    vals = np.sqrt(dx**2 + dy**2)
+
+    return vals
+
+def estima_holder(campo, x0, y0, R, npts=200, plot_testar=False, outdir="plots", N=None):
+    rs = np.logspace(np.log10(2**(-N)), np.log10(R), npts)
+    xs = x0 + rs
     ys = holder_mod_fixo_y(campo, x0, y0, xs)
-    rs = np.abs(xs - x0)
+    
 
     mask = (rs > 0) & (ys > 0)
     if np.sum(mask) < 5:  # poucos pontos válidos
         return None
 
-    logr = np.log(rs[mask])
-    logd = np.log(ys[mask])
+    logr = np.log2(rs[mask])
+    logd = np.log2(ys[mask])
     coef = np.polyfit(logr, logd, 1)
     h_est = coef[0]
 
@@ -36,8 +46,8 @@ def estima_holder(campo, x0, y0, R, npts=250, plot_testar=False, outdir="plots",
         
         xm, ym = np.median(logr), np.median(logd)
         plt.plot(logr, ym + (1/3)*(logr - xm), '--', label="h = 1/3 ref")
-        plt.xlabel("log |x-x0|")
-        plt.ylabel("log ||ΔV||")
+        plt.xlabel("log_2|x-x0|")
+        plt.ylabel("log_2||ΔV||")
         plt.legend()
         fname = f"{outdir}/holder_N{N}_x{x0:.2f}_y{y0:.2f}.png"
         plt.savefig(fname, dpi=150)
@@ -46,7 +56,7 @@ def estima_holder(campo, x0, y0, R, npts=250, plot_testar=False, outdir="plots",
     return h_est
 
 # parâmetros da varredura
-Ns = range(1, 12)   # valores de N a testar
+Ns = range(1, 20)   # valores de N a testar
 pontos = [(np.sqrt(2)/4, np.pi/5), (np.sqrt(2), np.pi)]  # pontos de teste
 plot_testar = True  # <<< só muda aqui para ativar/desativar os plots
 
