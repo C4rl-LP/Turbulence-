@@ -1,5 +1,6 @@
 import sla
 import numpy as np
+import cupy as cp
 from matplotlib import pyplot as plt
 import os
 
@@ -56,8 +57,8 @@ def estima_holder(campo, x0, y0, R, npts=200, plot_testar=False, outdir="plots",
     return h_est
 
 # parâmetros da varredura
-Ns = range(1, 20)   # valores de N a testar
-pontos = [(np.sqrt(2)/4, np.pi/5), (np.sqrt(2), np.pi)]  # pontos de teste
+Ns = range(1, 13)   # valores de N a testar
+pontos = [(np.sqrt(2)/4, np.pi/5), (np.sqrt(2), np.pi), (np.pi/10, np.e/10) ]  # pontos de teste
 plot_testar = True  # <<< só muda aqui para ativar/desativar os plots
 
 saida = open("holder_results.txt", "w")

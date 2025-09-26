@@ -1,5 +1,6 @@
 from matplotlib import pyplot as plt
-import numpy as np 
+import numpy as cp
+import cupy as np
 from itertools import product
 from joblib import Parallel, delayed
 
@@ -35,7 +36,7 @@ class solve_RK4():
             self.r.append(self.proximo_passo(i))
             self.t.append(self.t[i] + dt)
             i += 1 
-        return np.array(self.t), np.vstack(self.r)
+        return cp.array(self.t), cp.vstack(self.r)
 
 #===========================================================================================================================
 #---------------------------------------------------------------------------------------------------------------------------
@@ -67,13 +68,13 @@ class Vector_plot_quarter_division:
         Ri = self.R1 * 2**(-i + 1)
         Ti = self.T1 * self.lamb**(-i + 1)
         r2 = (x - x0)**2 + (y - y0)**2
-        return (2*np.pi*Ri**2/Ti) * np.exp(-r2/(2*Ri**2) + 0.5)
+        return (2*cp.pi*Ri**2/Ti) * cp.exp(-r2/(2*Ri**2) + 0.5)
 
     def laplaciano_phis(self, x, y, i, x0, y0):
         Ri = self.R1 * 2**(-i + 1)
         Ti = self.T1 * self.lamb**(-i + 1)
         r2 = (x - x0)**2 + (y - y0)**2
-        phi = (2*np.pi*Ri**2/Ti) * np.exp(-r2/(2*Ri**2) + 0.5)
+        phi = (2*cp.pi*Ri**2/Ti) * cp.exp(-r2/(2*Ri**2) + 0.5)
         lap = phi * (r2/Ri**4 - 2/Ri**2)
         return lap
 
@@ -108,7 +109,7 @@ class Vector_plot_quarter_division:
 #---------------------------------------------------------------------------------------------------------------------------
 #===========================================================================================================================
 if __name__ == '__main__':
-    plot = False
+    plot =  True
     resolver_teste = False
     if plot or resolver_teste:
         x0, y0 = (0,0)    
@@ -119,15 +120,15 @@ if __name__ == '__main__':
         campo = Vector_plot_quarter_division(N_fields=N_campos, R1=R1, T1=T1, lamb=lamb)
 
         n = 50
-        x = np.linspace(-1.5*campo.R1 + x0, 1.5*campo.R1 + x0, n)
-        y = np.linspace(-1.5*campo.R1 + y0, 1.5*campo.R1 + y0, n)
-        X, Y = np.meshgrid(x, y)
+        x = cp.linspace(-1.5*campo.R1 + x0, 1.5*campo.R1 + x0, n)
+        y = cp.linspace(-1.5*campo.R1 + y0, 1.5*campo.R1 + y0, n)
+        X, Y = cp.meshgrid(x, y)
 
         all_Vx, all_Vy, pts, phis_tot, lap_tot = campo.campos(X, Y, x0, y0)
 
         def func(t, r):
             Vx, Vy, _, _, _ = campo.campos(r[0], r[1], x0, y0)   
-            return np.array([Vx, Vy], dtype=float)
+            return cp.array([Vx, Vy], dtype=float)
 
 
     plot_centros = False
@@ -144,7 +145,8 @@ if __name__ == '__main__':
     #===========================================================================================================================
 
     if plot:
-        magnitude = np.hypot(all_Vx, all_Vy)
+        magnitude = cp.hypot(all_Vx, all_Vy)
+        
         xs, ys = zip(*pts)  
         fig, axes = plt.subplots(1, 4, figsize=(22, 5), constrained_layout=True)
 
@@ -212,23 +214,23 @@ if __name__ == '__main__':
             # Função da EDO
             def func(t, r):
                 Vx, Vy, _, _, _ = campo.campos(r[0], r[1], 0, 0)
-                return np.array([Vx, Vy], dtype=float)
+                return cp.array([Vx, Vy], dtype=float)
             print('campo feito')
             # Trajetória central
-            rk_central = solve_RK4(func, np.array(r0, dtype=float), 0, dt, t_max)
+            rk_central = solve_RK4(func, cp.array(r0, dtype=float), 0, dt, t_max)
             t_central, r_central = rk_central.fazer()
             print('central resolvido')
             trajetorias_vizinhos = []
             x0, y0 = r0
-            n_vizinhos = int(densidade_vizinhos *np.pi*delta**2 )
+            n_vizinhos = int(densidade_vizinhos *cp.pi*delta**2 )
             def simular_vizinho(seed=None):
                 if seed is not None:
-                    np.random.seed(seed)  # garante diversidade nos processos paralelos
-                theta = np.random.uniform(0, 2*np.pi)
-                r = delta * np.sqrt(np.random.uniform(0, 1)) 
-                dx = r * np.cos(theta)
-                dy = r * np.sin(theta)
-                pos_viz = np.array([x0 + dx, y0 + dy], dtype=float)
+                    cp.random.seed(seed)  # garante diversidade nos processos paralelos
+                theta = cp.random.uniform(0, 2*cp.pi)
+                r = delta * cp.sqrt(cp.random.uniform(0, 1)) 
+                dx = r * cp.cos(theta)
+                dy = r * cp.sin(theta)
+                pos_viz = cp.array([x0 + dx, y0 + dy], dtype=float)
                 rk_viz = solve_RK4(func, pos_viz, 0, dt, t_max)
                 _, r_viz = rk_viz.fazer()
                 return r_viz
@@ -252,7 +254,7 @@ if __name__ == '__main__':
 
         pos0 = (-0.5, -0.5)
         delta = 0.02
-        densidade_vizinhos = 10/(np.pi*delta**2)
+        densidade_vizinhos = 10/(cp.pi*delta**2)
         t_max = 0.5
         n = int(input())
         resultados = []
