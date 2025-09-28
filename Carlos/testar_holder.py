@@ -5,51 +5,55 @@ from matplotlib import pyplot as plt
 import os
 
 
+def cp_polyfit(x, y, deg):
+    # Matriz de Vandermonde no GPU
+    X = cp.vander(x, deg + 1)  
+    # Resolve mínimos quadrados (coef ~ np.polyfit)
+    coef, *_ = cp.linalg.lstsq(X, y, rcond=None)
+    return coef
+
+
 def holder_mod_fixo_y(campo, x0, y0, xs):
-    # vetor no ponto fixo
-    V0x, V0y, *_ = campo(x0, y0)
-
-    # avalia todos os pontos de uma vez
-    Vx, Vy, *_ = campo(xs, np.full_like(xs, y0))
-
-    # diferenças (já arrays)
-    dx = V0x - Vx
-    dy = V0y - Vy
-
-    # norma
-    vals = np.sqrt(dx**2 + dy**2)
-
+    V0x, V0y, *_ = campo(cp.array(x0), cp.array(y0))
+    Vx, Vy, *_ = campo(xs, cp.full_like(xs, y0))
+    vals = cp.sqrt((V0x - Vx)**2 + (V0y - Vy)**2)
     return vals
 
 def estima_holder(campo, x0, y0, R, npts=200, plot_testar=False, outdir="plots", N=None):
-    rs = np.logspace(np.log10(2**(-N)), np.log10(R), npts)
+    rs = cp.logspace(cp.log10(2**(-N)), cp.log10(R), npts)
     xs = x0 + rs
     ys = holder_mod_fixo_y(campo, x0, y0, xs)
-    
 
     mask = (rs > 0) & (ys > 0)
-    if np.sum(mask) < 5:  # poucos pontos válidos
+    if int(cp.sum(mask).get()) < 5:
         return None
 
-    logr = np.log2(rs[mask])
-    logd = np.log2(ys[mask])
-    coef = np.polyfit(logr, logd, 1)
+    logr = cp.log2(rs[mask])
+    logd = cp.log2(ys[mask])
+
+    # ajuste linear no GPU (grau 1)
+    A = cp.vstack([logr, cp.ones_like(logr)]).T
+    coef, _, _, _ = cp.linalg.lstsq(A, logd, rcond=None)
     h_est = coef[0]
 
-    # se quiser salvar o gráfico
+
     if plot_testar:
-        if not os.path.exists(outdir):
-            os.makedirs(outdir)
+        logr_cpu = cp.asnumpy(logr)
+        logd_cpu = cp.asnumpy(logd)
+        coef_cpu = cp.asnumpy(coef)
+        fit_vals = np.polyval(coef_cpu, logr_cpu)
 
         plt.figure()
-        plt.scatter(logr, logd, s=10, label="dados")
-        plt.plot(logr, np.polyval(coef, logr), 'r', label=f"ajuste: h≈{h_est:.3f}")
-        
-        xm, ym = np.median(logr), np.median(logd)
-        plt.plot(logr, ym + (1/3)*(logr - xm), '--', label="h = 1/3 ref")
+        plt.scatter(logr_cpu, logd_cpu, s=10, label="dados")
+        plt.plot(logr_cpu, fit_vals, 'r', label=f"ajuste: h≈{h_est:.3f}")
+        xm = np.median(logr_cpu)
+        ym = np.median(logd_cpu)
+        plt.plot(logr_cpu, ym + (1/3)*(logr_cpu - xm), '--', label="h = 1/3 ref")
         plt.xlabel("log_2|x-x0|")
         plt.ylabel("log_2||ΔV||")
         plt.legend()
+        if not os.path.exists(outdir):
+            os.makedirs(outdir)
         fname = f"{outdir}/holder_N{N}_x{x0:.2f}_y{y0:.2f}.png"
         plt.savefig(fname, dpi=150)
         plt.close()
@@ -57,9 +61,9 @@ def estima_holder(campo, x0, y0, R, npts=200, plot_testar=False, outdir="plots",
     return h_est
 
 # parâmetros da varredura
-Ns = range(1, 13)   # valores de N a testar
-pontos = [(np.sqrt(2)/4, np.pi/5), (np.sqrt(2), np.pi), (np.pi/10, np.e/10) ]  # pontos de teste
-plot_testar = True  # <<< só muda aqui para ativar/desativar os plots
+Ns = range(1, 13)
+pontos = [(cp.sqrt(2)/4, cp.pi/5), (cp.sqrt(2), cp.pi), (cp.pi/10, cp.e/10)]
+plot_testar = False
 
 saida = open("holder_results.txt", "w")
 saida.write("N, x0, y0, h_est\n")
@@ -79,4 +83,3 @@ for N in Ns:
 
 saida.close()
 print("Resultados salvos em holder_results.txt")
-
