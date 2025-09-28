@@ -1,6 +1,6 @@
 from matplotlib import pyplot as plt
-import numpy as cp
-import cupy as np
+import numpy as np
+import cupy as cp
 from itertools import product
 from joblib import Parallel, delayed
 
@@ -16,27 +16,33 @@ class solve_RK4():
 
     def __init__(self, func, r0, t0, dt, t_max):
         self.func = func
-        self.r = [r0]
-        self.t = [t0]
-        self.dt = dt
-        self.t_max = t_max
-    def proximo_passo(self, i):
-        ri = self.r[i]
-        ti = self.t[i]
-        dt = self.dt
-        k1 = self.func(ti, ri) 
-        k2 = self.func(ti + dt/2, ri + dt/2 *k1)
-        k3 = self.func(ti + dt/2, ri + dt/2 * k2)
-        k4 = self.func(ti + dt, ri + dt*k3)
-        return ri + dt/6 * (k1 + 2*k2 +  2*k3 + k4)
+        self.r0 = cp.asarray(r0, dtype=cp.float64)
+        self.t0 = float(t0)
+        self.dt = float(dt)
+        self.t_max = float(t_max)
+
     def fazer(self):
-        dt = self.dt
-        i= 0
-        while self.t[-1] < self.t_max:
-            self.r.append(self.proximo_passo(i))
-            self.t.append(self.t[i] + dt)
-            i += 1 
-        return cp.array(self.t), cp.vstack(self.r)
+        n_steps = int(cp.ceil((self.t_max - self.t0) / self.dt).get())
+        r = cp.empty((n_steps + 1, self.r0.shape[0]), dtype=cp.float64)
+        t = cp.empty(n_steps + 1, dtype=cp.float64)
+
+        r[0] = self.r0
+        t[0] = self.t0
+
+        for i in range(n_steps):
+            ri = r[i]
+            ti = t[i]
+            dt = self.dt
+
+            k1 = self.func(ti, ri)
+            k2 = self.func(ti + dt/2, ri + dt/2 * k1)
+            k3 = self.func(ti + dt/2, ri + dt/2 * k2)
+            k4 = self.func(ti + dt, ri + dt * k3)
+
+            r[i+1] = ri + dt/6 * (k1 + 2*k2 + 2*k3 + k4)
+            t[i+1] = ti + dt
+
+        return t, r
 
 #===========================================================================================================================
 #---------------------------------------------------------------------------------------------------------------------------
@@ -45,7 +51,7 @@ def gerar_tuplas(x, y, n, R):
     if n < 1:
         return [(x, y)]
     deslocs = [[R/(2**i), -R/(2**i)] for i in range(1, n+1)]
-    combos = list(product(*deslocs))  
+    combos = list(product(*deslocs))
     return [(x + sum(dx), y + sum(dy)) for dx in combos for dy in combos]
 
 #===========================================================================================================================
@@ -79,14 +85,14 @@ class Vector_plot_quarter_division:
         return lap
 
     def campos(self, x, y, x0, y0):
-        Vx_total = 0.0
-        Vy_total = 0.0
-        phis_total = 0.0
-        lap_total = 0.0
+        Vx_total = cp.zeros_like(x)
+        Vy_total = cp.zeros_like(y)
+        phis_total = cp.zeros_like(x)
+        lap_total = cp.zeros_like(x)
         pontos = []
 
         for i in range(1, self.N_fields+1):
-            pts = self.pontos_por_i[i-1]  # já pré-computados
+            pts = self.pontos_por_i[i-1]
             for j, (x0i, y0i) in enumerate(pts):
                 ix = j % (2**(i-1))
                 iy = j // (2**(i-1))
