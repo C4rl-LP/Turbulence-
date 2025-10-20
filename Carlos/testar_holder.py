@@ -3,80 +3,110 @@ import numpy as np
 import cupy as cp
 from matplotlib import pyplot as plt
 import os
+from sla import to_cpu  # importar a função auxiliar
+
 
 
 def holder_mod_fixo_y(campo, x0, y0, xs):
-    # vetor no ponto fixo
-    V0x, V0y, *_ = campo(x0, y0)
+    """
+    xs: array de posições x (cupy)
+    retorna vals (cupy) mesmo shape
+    """
+    # Garantir que xs é cupy array
+    xs_cp = cp.asarray(xs)
 
-    # avalia todos os pontos de uma vez
-    Vx, Vy, *_ = campo(xs, np.full_like(xs, y0))
+    # Avalia vetor de uma só chamada (vetorizado no campo)
+    V0x, V0y, *_ = campo(x0, y0)  # escalar (será 0-dim ou shape ())
+    Vx, Vy, *_ = campo(xs_cp, cp.full_like(xs_cp, y0))
 
-    # diferenças (já arrays)
     dx = V0x - Vx
     dy = V0y - Vy
 
-    # norma
-    vals = np.sqrt(dx**2 + dy**2)
-
+    vals = cp.sqrt(dx**2 + dy**2)
     return vals
+def polyfit_gpu(x, y, deg=1):
+    """Versão GPU do np.polyfit (usando mínimos quadrados)."""
+    # Monta matriz de Vandermonde
+    X = cp.vander(x, deg + 1)
+    # Resolve (X^T X) a = X^T y
+    A = X.T @ X
+    b = X.T @ y
+    coef = cp.linalg.solve(A, b)
+    return coef  # do maior para o menor grau
+
+
+def polyval_gpu(coef, x):
+    """Avalia polinômio na GPU."""
+    y = cp.zeros_like(x)
+    for c in coef:
+        y = y * x + c
+    return y
+
 
 def estima_holder(campo, x0, y0, R, npts=200, plot_testar=False, outdir="plots", N=None):
-    rs = np.logspace(np.log10(2**(-N)), np.log10(R), npts)
+    rs = cp.logspace(cp.log10(2**(-N)), cp.log10(R), npts)
     xs = x0 + rs
     ys = holder_mod_fixo_y(campo, x0, y0, xs)
-    
 
     mask = (rs > 0) & (ys > 0)
-    if np.sum(mask) < 5:  # poucos pontos válidos
+    if cp.sum(mask) < 5:
         return None
 
-    logr = np.log2(rs[mask])
-    logd = np.log2(ys[mask])
-    coef = np.polyfit(logr, logd, 1)
+    logr = cp.log2(rs[mask])
+    logd = cp.log2(ys[mask])
+
+    coef = polyfit_gpu(logr, logd, 1)
     h_est = coef[0]
 
-    # se quiser salvar o gráfico
+
     if plot_testar:
         if not os.path.exists(outdir):
             os.makedirs(outdir)
 
+        # transferir dados para CPU antes do plot
+        logr_cpu = cp.asnumpy(logr)
+        logd_cpu = cp.asnumpy(logd)
+        coef_cpu = cp.asnumpy(coef)
+
         plt.figure()
-        plt.scatter(logr, logd, s=10, label="dados")
-        plt.plot(logr, np.polyval(coef, logr), 'r', label=f"ajuste: h≈{h_est:.3f}")
+        plt.scatter(logr_cpu, logd_cpu, s=10, label="dados")
+        plt.plot(logr_cpu, np.polyval(coef_cpu, logr_cpu), 'r', label=f"ajuste: h≈{float(h_est):.3f}")
         
-        xm, ym = np.median(logr), np.median(logd)
-        plt.plot(logr, ym + (1/3)*(logr - xm), '--', label="h = 1/3 ref")
-        plt.xlabel("log_2|x-x0|")
-        plt.ylabel("log_2||ΔV||")
+        xm, ym = np.median(logr_cpu), np.median(logd_cpu)
+        plt.plot(logr_cpu, ym + (1/3)*(logr_cpu - xm), '--', label="h = 1/3 ref")
+        plt.xlabel("log₂|x-x₀|")
+        plt.ylabel("log₂||ΔV||")
         plt.legend()
         fname = f"{outdir}/holder_N{N}_x{x0:.2f}_y{y0:.2f}.png"
         plt.savefig(fname, dpi=150)
         plt.close()
 
-    return h_est
+    return float(h_est)
 
-# parâmetros da varredura
-Ns = range(1, 13)   # valores de N a testar
-pontos = [(np.sqrt(2)/4, np.pi/5), (np.sqrt(2), np.pi), (np.pi/10, np.e/10) ]  # pontos de teste
-plot_testar = True  # <<< só muda aqui para ativar/desativar os plots
+# ---- Loop principal ----
+Ns = range(10, 13)
+pontos = [(cp.sqrt(2)/4, cp.pi/5), (cp.sqrt(2), cp.pi), (cp.pi/10, cp.e/10)]
+plot_testar = True
 
-saida = open("holder_results.txt", "w")
-saida.write("N, x0, y0, h_est\n")
+with open("holder_results.txt", "w") as saida:
+    saida.write("N, x0, y0, h_est\n")
+    for N in Ns:
+        campo_t = sla.Vector_plot_quarter_division(N, 1, 1, 2**(1 - 1/3))
 
-for N in Ns:
-    campo_t = sla.Vector_plot_quarter_division(N, 1, 1, 2**(1-1/3))
-    def campo_0(x, y):
-        return campo_t.campos(x, y, 0, 0)
+        def campo_0(x, y):
+            # Força tudo para GPU
+            x_gpu = cp.asarray(x)
+            y_gpu = cp.asarray(y)
+            return campo_t.campos(x_gpu, y_gpu, 0, 0)
 
-    for (x0, y0) in pontos:
-        h = estima_holder(campo_0, x0, y0, R=campo_t.R1, npts=200, plot_testar=plot_testar, N=N)
-        if h is not None:
-            print(f"N={N}, ponto=({x0:.2f},{y0:.2f}), h≈{h:.3f}")
-            saida.write(f"{N}, {x0:.5f}, {y0:.5f}, {h:.6f}\n")
-        else:
-            print(f"N={N}, ponto=({x0:.2f},{y0:.2f}) -- não pôde estimar")
+        for (x0, y0) in pontos:
+            h = estima_holder(campo_0, x0, y0, R=campo_t.R1, npts=200, plot_testar=plot_testar, N=N)
+            if h is not None:
+                print(f"N={N}, ponto=({float(x0):.2f},{float(y0):.2f}), h≈{h:.3f}")
+                saida.write(f"{N}, {float(x0):.5f}, {float(y0):.5f}, {h:.6f}\n")
+            else:
+                print(f"N={N}, ponto=({float(x0):.2f},{float(y0):.2f}) -- não pôde estimar")
 
-saida.close()
 print("Resultados salvos em holder_results.txt")
+
 
