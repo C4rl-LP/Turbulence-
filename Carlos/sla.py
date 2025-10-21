@@ -3,7 +3,9 @@ import numpy as np
 import cupy as cp
 from itertools import product
 from joblib import Parallel, delayed
-
+import pickle
+import os 
+import gc
 #===========================================================================================================================
 #---------------------------------------------------------------------------------------------------------------------------
 #===========================================================================================================================
@@ -52,42 +54,54 @@ def gerar_tuplas(x, y, n, R):
 #---------------------------------------------------------------------------------------------------------------------------
 #===========================================================================================================================
 class Vector_plot_quarter_division:
-    def __init__(self, N_fields, R1, T1, lamb):
+    def __init__(self, N_fields, R1, T1, lamb, cache_dir="cache_centros"):
         self.N_fields = N_fields
         self.R1 = R1
         self.T1 = T1
         self.lamb = lamb
+        os.makedirs(cache_dir, exist_ok=True)
+        cache_path = os.path.join(cache_dir, f"centros_N{N_fields}.pkl")
 
-        # Pré-computa todos os deslocamentos para cada i e também
-        # cria lista flatten de todos os centros com suas flags 's' (±1)
-        centros = []
-        s_flags = []
-        idx_offset = 0
-        for i in range(1, N_fields+1):
-            pts = gerar_tuplas(0, 0, i-1, R1)
-            # calcular s para cada ponto j
-            npts_i = len(pts)
-            for j, (x0i, y0i) in enumerate(pts):
-                ix = j % (2**(i-1))
-                iy = j // (2**(i-1))
-                s = 1 if (ix + iy) % 2 == 0 else -1
-                centros.append((x0i, y0i, i, s))
-        # converte para arrays de cupy para vetorização rápida
-        if len(centros) > 0:
-            arr = cp.asarray(centros)  # shape (M,4) dtype=object -> we'll extract columns
-            # but safer to build typed arrays:
-            self._centers_x = cp.array([c[0] for c in centros], dtype=float)
-            self._centers_y = cp.array([c[1] for c in centros], dtype=float)
-            self._centers_i = cp.array([int(c[2]) for c in centros], dtype=int)
-            self._centers_s = cp.array([int(c[3]) for c in centros], dtype=int)
+        # ---------------------- Cache incremental ----------------------
+        if os.path.exists(cache_path):
+            print(f"♻️  Reutilizando centros de cache para N={N_fields}")
+            with open(cache_path, "rb") as f:
+                centros = pickle.load(f)
         else:
-            self._centers_x = cp.array([], dtype=float)
-            self._centers_y = cp.array([], dtype=float)
-            self._centers_i = cp.array([], dtype=int)
-            self._centers_s = cp.array([], dtype=int)
+            print(f"🧮 Gerando centros do zero para N={N_fields}")
+            centros = []
+            for i in range(1, N_fields + 1):
+                # tenta carregar cache parcial anterior
+                prev_cache = os.path.join(cache_dir, f"centros_N{i-1}.pkl")
+                if os.path.exists(prev_cache):
+                    with open(prev_cache, "rb") as f:
+                        centros_prev = pickle.load(f)
+                else:
+                    centros_prev = []
 
-        # keep a python list of pontos for legacy plotting (CPU-friendly)
-        self.pontos_all = [(float(cx), float(cy)) for (cx, cy, *_ ) in centros] if len(centros) else []
+                # gera apenas os novos pontos do nível i
+                pts = gerar_tuplas(0, 0, i - 1, R1)
+                novos = []
+                for j, (x0i, y0i) in enumerate(pts):
+                    ix = j % (2 ** (i - 1))
+                    iy = j // (2 ** (i - 1))
+                    s = 1 if (ix + iy) % 2 == 0 else -1
+                    novos.append((x0i, y0i, i, s))
+                centros = centros_prev + novos
+
+                # salva cache incremental (para reutilizar no próximo N)
+                with open(os.path.join(cache_dir, f"centros_N{i}.pkl"), "wb") as f:
+                    pickle.dump(centros, f)
+        # ----------------------------------------------------------------
+
+        # converte para arrays de cupy
+        self._centers_x = cp.array([c[0] for c in centros], dtype=float)
+        self._centers_y = cp.array([c[1] for c in centros], dtype=float)
+        self._centers_i = cp.array([int(c[2]) for c in centros], dtype=int)
+        self._centers_s = cp.array([int(c[3]) for c in centros], dtype=int)
+
+        # também guarda versão CPU-friendly
+        self.pontos_all = [(float(cx), float(cy)) for (cx, cy, *_ ) in centros]
 
     def phis_i_scalar(self, r2, Ri, Ti):
         # r2 = (x-x0)^2 + (y-y0)^2  (can be array)
@@ -181,6 +195,7 @@ class Vector_plot_quarter_division:
             # liberar memória temporária do bloco
             del dx, dy, r2, pref, inv_Ri2, Ri4, Ri2, exponent, phi_block, lap_block, s_block, Vx_block, Vy_block
             cp.get_default_memory_pool().free_all_blocks()
+            gc.collect()
 
         # acrescentar offsets x0,y0 se necessário (se você realmente usa x0,y0 para deslocar o campo)
         # aqui x0,y0 foram passados mas não usados nos centros (centros já estão em coords globais).
@@ -209,11 +224,15 @@ def to_cpu(arr):
 #---------------------------------------------------------------------------------------------------------------------------
 #===========================================================================================================================
 if __name__ == '__main__':
+    cp.get_default_memory_pool().free_all_blocks()
+    gc.collect()
+    
+    
     plot =  True
     resolver_teste = False
     if plot or resolver_teste:
         x0, y0 = (0,0)    
-        N_campos = 1
+        N_campos = 14
         R1 = 1.0
         T1 = 1.0
         lamb = 2**(2/3)
@@ -231,7 +250,7 @@ if __name__ == '__main__':
             return cp.array([Vx, Vy], dtype=float)
 
 
-    plot_centros = False
+    plot_centros = True
     if resolver_teste:
         ponto_inicial = [-.25, 0]
         t0 = 0
@@ -245,20 +264,61 @@ if __name__ == '__main__':
     #===========================================================================================================================
 
     if plot:
-        magnitude = cp.hypot(all_Vx, all_Vy)
-        
-        xs, ys = zip(*pts)  
+    # --- converte para CPU (NumPy) com segurança ---
+        try:
+            import cupy as _cp
+        except Exception:
+            _cp = None
+
+        def _to_numpy(x):
+            # usa sua função to_cpu se disponível, senão tenta cp.asnumpy, senão retorna x
+            try:
+                return to_cpu(x)
+            except Exception:
+                if _cp is not None and isinstance(x, _cp.ndarray):
+                    return _cp.asnumpy(x)
+                return x
+
+        X_cpu = _to_numpy(X)
+        Y_cpu = _to_numpy(Y)
+        Vx_cpu = _to_numpy(all_Vx)
+        Vy_cpu = _to_numpy(all_Vy)
+        phis_cpu = _to_numpy(phis_tot)
+        lap_cpu = _to_numpy(lap_tot)
+
+        # magnitude em CPU (garante que cálculo seja feito na GPU antes da cópia, se desejado)
+        # se magnitude já era cp.ndarray, _to_numpy cuidará; caso contrário, calcula em CPU
+        if _cp is not None and (isinstance(all_Vx, _cp.ndarray) or isinstance(all_Vy, _cp.ndarray)):
+            # já foi calculado em GPU, então converti-os e uso numpy
+            magnitude_cpu = np.hypot(Vx_cpu, Vy_cpu)
+        else:
+            magnitude_cpu = np.hypot(Vx_cpu, Vy_cpu)
+
+        # pts -> arrays para scatter (pode ser lista de tuples CPU, mas garantimos numpy)
+        try:
+            xs = np.array([_to_numpy(p[0]) for p in pts])
+            ys = np.array([_to_numpy(p[1]) for p in pts])
+        except Exception:
+            # se pts já estiver em formato compatível
+            xs, ys = zip(*pts)
+            xs = np.array(xs); ys = np.array(ys)
+
+        # preparar figura
         fig, axes = plt.subplots(1, 4, figsize=(22, 5), constrained_layout=True)
 
         # 1) Campo vetorial + trajetória RK4
         ax = axes[0]
         if resolver_teste:
-            x_sol = r_solved[:, 0]
-            y_sol = r_solved[:, 1]
+            # converte trajetórias RK4 se existirem
+            x_sol = _to_numpy(r_solved[:, 0])
+            y_sol = _to_numpy(r_solved[:, 1])
             ax.plot(x_sol, y_sol, "r-", lw=2, label="trajetória RK4")
             ax.plot(x_sol[0], y_sol[0], "go", label="início")
             ax.plot(x_sol[-1], y_sol[-1], "ro", label="fim")
-        strm = ax.streamplot(X, Y, all_Vx, all_Vy, color=magnitude, cmap="plasma", density=2, linewidth=1)
+
+        # streamplot espera arrays NumPy 2D com shapes consistentes
+        strm = ax.streamplot(X_cpu, Y_cpu, Vx_cpu, Vy_cpu, color=magnitude_cpu,
+                            cmap="plasma", density=2, linewidth=1)
         if plot_centros:
             ax.scatter(xs, ys, color="black", s=1, label="centros $\\phi_i$")
         ax.set_title(f"Campo vetorial e trajetória (N = {N_campos})")
@@ -268,21 +328,21 @@ if __name__ == '__main__':
 
         # 2) Módulo do campo vetorial
         ax = axes[1]
-        cont_mag = ax.contourf(X, Y, magnitude, levels=100, cmap="plasma")
+        cont_mag = ax.contourf(X_cpu, Y_cpu, magnitude_cpu, levels=100, cmap="plasma")
         ax.set_title("Módulo do campo vetorial $|V(x, y)|$")
         ax.axis("equal")
         fig.colorbar(cont_mag, ax=ax).set_label("|V|")
 
         # 3) Campo escalar total
         ax = axes[2]
-        cont_phi = ax.contourf(X, Y, phis_tot, levels=100, cmap="viridis")
+        cont_phi = ax.contourf(X_cpu, Y_cpu, phis_cpu, levels=100, cmap="viridis")
         ax.set_title("Campo escalar total $\\sum_i \\phi_i(x, y)$")
         ax.axis("equal")
         fig.colorbar(cont_phi, ax=ax).set_label("$\\phi_{\\mathrm{total}}$")
 
         # 4) Laplaciano do campo escalar total
         ax = axes[3]
-        cont_lap = ax.contourf(X, Y, lap_tot, levels=100, cmap="inferno")
+        cont_lap = ax.contourf(X_cpu, Y_cpu, lap_cpu, levels=100, cmap="inferno")
         ax.set_title("Laplaciano $\\nabla^2 \\sum_i \\phi_i(x, y)$")
         ax.axis("equal")
         fig.colorbar(cont_lap, ax=ax).set_label("$\\nabla^2 \\phi_{\\mathrm{total}}$")
