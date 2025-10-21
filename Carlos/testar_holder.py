@@ -4,7 +4,7 @@ import cupy as cp
 from matplotlib import pyplot as plt
 import os
 from sla import to_cpu  # importar a função auxiliar
-
+import gc
 
 
 def holder_mod_fixo_y(campo, x0, y0, xs):
@@ -84,14 +84,20 @@ def estima_holder(campo, x0, y0, R, npts=200, plot_testar=False, outdir="plots",
     return float(h_est)
 
 # ---- Loop principal ----
-Ns = range(10, 13)
+Ns = range(10, 20)
 pontos = [(cp.sqrt(2)/4, cp.pi/5), (cp.sqrt(2), cp.pi), (cp.pi/10, cp.e/10)]
 plot_testar = True
 
 with open("holder_results.txt", "w") as saida:
     saida.write("N, x0, y0, h_est\n")
     for N in Ns:
-        campo_t = sla.Vector_plot_quarter_division(N, 1, 1, 2**(1 - 1/3))
+        print(f"N={N}: iniciando")
+        try:
+            campo_t = sla.Vector_plot_quarter_division(N, 1, 1, 2**(1 - 1/3))
+        except cp.cuda.memory.OutOfMemoryError:
+            print(f"🚫 Falta de memória em N={N}")
+            break
+        print('fodasi')
 
         def campo_0(x, y):
             # Força tudo para GPU
@@ -107,6 +113,10 @@ with open("holder_results.txt", "w") as saida:
             else:
                 print(f"N={N}, ponto=({float(x0):.2f},{float(y0):.2f}) -- não pôde estimar")
 
+
+        cp.get_default_memory_pool().free_all_blocks()
+        gc.collect()
+        print(f"→ Memória da GPU liberada após N={N}\n")
 print("Resultados salvos em holder_results.txt")
 
 
