@@ -45,6 +45,7 @@ def polyval_gpu(coef, x):
 
 def estima_holder(campo, x0, y0, R, npts=200, plot_testar=False, outdir="plots", N=None):
     rs = cp.logspace(cp.log10(2**(-N)), cp.log10(R), npts)
+    
     xs = x0 + rs
     ys = holder_mod_fixo_y(campo, x0, y0, xs)
 
@@ -84,8 +85,24 @@ def estima_holder(campo, x0, y0, R, npts=200, plot_testar=False, outdir="plots",
     return float(h_est)
 
 # ---- Loop principal ----
-Ns = range(10, 20)
-pontos = [(cp.sqrt(2)/4, cp.pi/5), (cp.sqrt(2), cp.pi), (cp.pi/10, cp.e/10)]
+Ns = range(1, 14)
+cp.random.seed(1001)
+def pontos_bola_2d(n_pontos=5, raio=1.0):
+    """
+    Gera pontos uniformemente distribuídos dentro de uma bola (círculo) 2D de raio 'raio'.
+    Retorna uma lista de tuplas (x, y) no formato CuPy.
+    """
+    pts = []
+    for _ in range(n_pontos):
+        r = raio * cp.sqrt(cp.random.rand())         # distribuição uniforme na área
+        theta = 2 * cp.pi * cp.random.rand()         # ângulo uniforme
+        x = r * cp.cos(theta)
+        y = r * cp.sin(theta)
+        pts.append((x, y))
+    return pts
+
+
+pontos = pontos_bola_2d(n_pontos=15, raio=1.0)
 plot_testar = True
 
 with open("holder_results.txt", "w") as saida:
