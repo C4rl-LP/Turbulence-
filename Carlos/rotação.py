@@ -367,7 +367,7 @@ def testar_estabilidade(
         print(f"Imagem salva em: {nome_arquivo}")
 testar_estabilidade(
     nivel_max=8,
-    N_particulas=10,
+    N_particulas=100,
     r0=r0
 )
 
