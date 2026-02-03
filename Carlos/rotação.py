@@ -198,9 +198,21 @@ def simular_particulas(N, N_fields, dimensao_quadrado, r0, dt=0.01, t_max=1):
 
     L = dimensao_quadrado
 
-    # Distribuição inicial aleatória das partículas
-    particle_t0 = r0 + np.random.uniform(-L/2, L/2, size=(N, 2))
+    # Distribuição inicial uniforme em um círculo de raio L/2
+    R0 = L / 2
 
+    theta = np.random.uniform(0, 2*np.pi, size=N-1)
+    u = np.random.uniform(0, 1, size=N-1)
+
+    r = R0 * np.sqrt(u)
+
+    dx = r * np.cos(theta)
+    dy = r * np.sin(theta)
+
+    particle_t0 = r0 + np.column_stack((dx, dy))
+
+    # adiciona a partícula central exatamente em r0
+    particle_t0 = np.vstack((particle_t0, r0))
 
     t, r = solve_RK4(funcao, particle_t0, 0.0, dt, t_max)
     return t, r
@@ -349,7 +361,7 @@ def testar_estabilidade(
             marker="x",
             label="ponto r0"
         )
-
+        print()
         plt.axis("equal")
         plt.xlabel("x")
         plt.ylabel("y")
@@ -359,18 +371,18 @@ def testar_estabilidade(
 
         nome_arquivo = os.path.join(
             pasta_saida,
-            f"estabilidade_nivel_{n}.png"
+            f"estabilidade_nivel_{n}_em_x{r0[0,0]:.2f}_y{r0[0,1]:.2f}em.png"
         )
         plt.savefig(nome_arquivo, dpi=200)
         plt.close()
 
         print(f"Imagem salva em: {nome_arquivo}")
-testar_estabilidade(
+'''testar_estabilidade(
     nivel_max=8,
-    N_particulas=100,
+    N_particulas=50,
     r0=r0
 )
-
+'''
 
 
 # ======================================================================
@@ -405,3 +417,70 @@ plt.ylim(-1, 1)
 plt.grid()
 plt.legend()
 plt.show()'''
+
+
+def lyapunov_maximo(
+    r0,
+    N_fields,
+    dt=0.01,
+    t_max=50,
+    delta0=1e-6,
+    n_renorm=10
+):
+    """
+    Calcula o expoente de Lyapunov máximo usando
+    renormalização periódica.
+    """
+
+    # condição inicial e perturbação
+    theta = np.random.uniform(0, 2*np.pi)
+    delta_vec = delta0 * np.array([np.cos(theta), np.sin(theta)])
+
+    r = r0.copy()
+    r_pert = r0 + delta_vec
+
+    soma_logs = 0.0
+    tempo_total = 0.0
+
+    for _ in range(int(t_max / (n_renorm * dt))):
+
+        # empilha as duas partículas
+        r_init = np.vstack([r, r_pert])
+
+        def funcao(t, R):
+            x = R[:, 0]
+            y = R[:, 1]
+            Vx, Vy = campo_total(x, y, t, N_fields)
+            return np.column_stack((Vx, Vy))
+
+        _, R = solve_RK4(
+            funcao,
+            r_init,
+            0.0,
+            dt,
+            n_renorm * dt
+        )
+
+        r = R[-1, 0]
+        r_pert = R[-1, 1]
+
+        delta = r_pert - r
+        dist = np.linalg.norm(delta)
+
+        soma_logs += np.log(dist / delta0)
+        tempo_total += n_renorm * dt
+
+        # renormalização
+        delta = delta / dist
+        r_pert = r + delta0 * delta
+
+    return soma_logs / tempo_total
+
+for n in range(1, 9):
+    lam = lyapunov_maximo(
+        r0=np.array([np.pi/6, np.sqrt(2)/4]),
+        N_fields=n,
+        dt=0.01,
+        t_max=80
+    )
+    print(f"Níveis = {n}, Lyapunov = {lam:.4f}")
