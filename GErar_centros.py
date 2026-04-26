@@ -360,7 +360,7 @@ def simular_particulas_2_static(N, N_fields, dimensao_quadrado, r0, dt=0.01, t_m
 
     t, r = it.solve_RK4(funcao, particle_t0, 0.0, dt, t_max)
     return t, r
-r0 = np.array([-.2, .1])
+'''r0 = np.array([-.2, .1])
 n_max = 20
 dt = 0.08 * R(n_max) 
 L = R(n_max)/16
@@ -383,6 +383,117 @@ plt.axis('equal')
 plt.grid()
 plt.legend()
 plt.show()
+'''
+import os
+def testar_estabilidade_2(
+    nivel_max,
+    
+    N_particulas,
+    r0,
+    pasta_saida="estabilidade_2",
+    nivel_min = 1
+):
+    """
+    Testa a estabilidade do ponto r0 para diferentes números de níveis do campo.
+    Para cada nível n:
+      - simula uma nuvem de partículas ao redor de r0
+      - plota as trajetórias
+      - salva a figura em disco
+    """
 
+    os.makedirs(pasta_saida, exist_ok=True)
+
+    for n in range(nivel_min, nivel_max + 1):
+
+
+        # Escalas naturais do nível
+        L = R(n)/16         # tamanho da nuvem inicial
+        dt = 0.08 * R(n)             # passo temporal
+        t_max = 5         # tempo total (alguns períodos)
+
+        print(f"Testando estabilidade para n = {n}")
+
+        ts, rs = simular_particulas_2_static(
+            N=N_particulas,
+            N_fields=n,
+            dimensao_quadrado=L,
+            r0=r0,
+            dt=dt,
+            t_max=t_max
+        )
+
+        # rs tem shape (Nt, N, 2)
+        Nt = rs.shape[0]
+
+        plt.figure(figsize=(6, 6))
+
+
+        cores = plt.cm.viridis(np.linspace(0, 1, N_particulas))
+
+        for i in range(N_particulas):
+            # Trajetória
+            plt.plot(
+                rs[:, i, 0],
+                rs[:, i, 1],
+                lw=1,
+                alpha=0.4,
+                color=cores[i]
+            )
+
+            # Ponto inicial (vazado)
+            plt.scatter(
+                rs[0, i, 0],
+                rs[0, i, 1],
+                facecolors="none",
+                edgecolors=cores[i],
+                s=30,
+                linewidths=1.5
+            )
+
+            # Ponto final (bem visível)
+            plt.scatter(
+                rs[-1, i, 0],
+                rs[-1, i, 1],
+                color=cores[i],
+                s=30,
+                zorder=3
+            )
+
+        # Ponto central
+        plt.scatter(
+            r0[0, 0],
+            r0[0, 1],
+            c="red",
+            s=100,
+            marker="x",
+            linewidths=2,
+            label="ponto r0"
+        )
+
+        plt.axis("equal")
+        plt.xlabel("x")
+        plt.ylabel("y")
+        plt.title(f"Estabilidade em torno de r0 — Níveis até n = {n}")
+        plt.legend()
+        plt.grid(alpha=0.3)
+
+
+        nome_arquivo = os.path.join(
+            pasta_saida,
+            f"estabilidade_nivel_{n}_em_x{r0[0,0]:.3f}_y{r0[0,1]:.2f}em.png"
+        )
+        plt.savefig(nome_arquivo, dpi=200)
+        plt.close()
+
+        print(f"Imagem salva em: {nome_arquivo}")
+
+r0 = np.array([[-.2, .1]])
+
+testar_estabilidade_2(
+    nivel_max=20,
+    N_particulas=50,
+    r0=r0,
+    nivel_min = 11
+)
 
 
