@@ -1,3 +1,5 @@
+import numpy as np 
+
 def solve_RK4(func, r0, t0, dt, t_max):
     """
     Resolve o sistema dr/dt = func(t, r) usando RK4.

@@ -7,7 +7,7 @@ from matplotlib.animation import FuncAnimation
 # ======================
 omega = 1.0
 R2 = 2.0
-R3 = 1
+R3 = 0.8
 
 phi2 = np.array([np.pi/4 + i*np.pi/2 for i in range(4)])
 phi3 = np.array([np.pi/4 + j*np.pi/2 for j in range(4)])
@@ -25,8 +25,8 @@ def x2(i, t):
 
 def x3(i, j, t):
     return x2(i, t) + R3*np.sqrt(2)*np.array([
-        np.cos(omega*2*t  + phi3[j]),
-        np.sin(omega*2*t  + phi3[j])
+        np.cos(omega*2*t + phi2[i] + phi3[j]),
+        np.sin(omega*2*t + phi2[i] + phi3[j])
     ])
 
 # ======================
