@@ -1,8 +1,8 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from itertools import product
-import os
-from tqdm import tqdm
+
+
 import integradores as it
 R_1 = 1            # Raio característico do nível 1
 O_1 = 1            # Frequência angular base
@@ -107,7 +107,7 @@ def atualiza_centro(cx, cy, t, n, idx):
     return cx + shift_x, cy + shift_y
 
 
-def campo_2(x, y, x_c, y_c,t, n, c= 0.8):
+def campo_2(x, y, x_c, y_c,t, n, c= 0.4):
     """
     Campo vetorial induzido por um único centro
     do nível n nos pontos (x, y).
@@ -158,7 +158,10 @@ def campo_total_otimo(x, y, t, n_max):
         dx = x - cx
         dy = y - cy
         # DEfinir dx para encontrar o quadrante
-        q = quadrante(dx, dy)
+        q = quadrante(
+            np.array([x[0]-cx]),
+            np.array([y[0]-cy])
+        )[0]
         Rn = R(n)
 
         
@@ -204,7 +207,7 @@ def campo_2_barra(x, y, t, n, index):
     if np.any(mask):
         poten[mask] = (
             2*np.pi
-            * np.exp(0.3 / ((r2[mask] / R2) - 1))
+            * np.exp(0.8 / ((r2[mask] / R2) - 1))
             / T(n)
         )
     vx[mask] = -dy[mask] * poten[mask]
@@ -357,149 +360,29 @@ def simular_particulas_2_static(N, N_fields, dimensao_quadrado, r0, dt=0.01, t_m
 
     t, r = it.solve_RK4(funcao, particle_t0, 0.0, dt, t_max)
     return t, r
-def testar_estabilidade_2_static(
-    nivel_max,
-    
-    N_particulas,
-    r0,
-    pasta_saida="estabilidade_2_static",
-    nivel_min = 1
-):
-    """
-    Testa a estabilidade do ponto r0 para diferentes números de níveis do campo.
-    Para cada nível n:
-      - simula uma nuvem de partículas ao redor de r0
-      - plota as trajetórias
-      - salva a figura em disco
-    """
+r0 = np.array([-.2, .1])
+n_max = 20
+dt = 0.08 * R(n_max) 
+L = R(n_max)/16
+t_, r_ = simular_particulas_2_static(4, n_max, dimensao_quadrado= L,r0 =r0,  dt =dt , t_max=5 )
 
-    os.makedirs(pasta_saida, exist_ok=True)
+traj = r_[:,0,:]
 
-    for n in tqdm(
-        range(nivel_min, nivel_max + 1),
-        desc="Testando níveis",
-        unit="nível"
-    ):
+xtraj = traj[:,0]
+ytraj = traj[:,1]
+plt.figure(figsize=(7,7))
 
+plt.plot(xtraj,ytraj,lw=1)
+plt.scatter(*r0,c='red',label='inicial')
+for j in range(r_.shape[1]):
+    plt.plot(r_[:,j,0], r_[:,j,1])
+plt.xlim(-1,1)
+plt.ylim(-1,1)
 
-        # Escalas naturais do nível
-        L = R(n)/16         # tamanho da nuvem inicial
-        dt = 0.08 * R(n)             # passo temporal
-        t_max = 10         # tempo total (alguns períodos)
-
-        print(f"Testando estabilidade para n = {n}")
-
-        ts, rs = simular_particulas_2_static(
-            N=N_particulas,
-            N_fields=n,
-            dimensao_quadrado=L,
-            r0=r0,
-            dt=dt,
-            t_max=t_max
-        )
-
-        # rs tem shape (Nt, N, 2)
-        Nt = rs.shape[0]
-
-        plt.figure(figsize=(6, 6))
-
-
-        cores = plt.cm.viridis(np.linspace(0, 1, N_particulas))
-
-        for i in range(N_particulas):
-            # Trajetória
-            plt.plot(
-                rs[:, i, 0],
-                rs[:, i, 1],
-                lw=1,
-                alpha=0.4,
-                color=cores[i]
-            )
-
-            # Ponto inicial (vazado)
-            plt.scatter(
-                rs[0, i, 0],
-                rs[0, i, 1],
-                facecolors="none",
-                edgecolors=cores[i],
-                s=30,
-                linewidths=1.5
-            )
-
-            # Ponto final (bem visível)
-            plt.scatter(
-                rs[-1, i, 0],
-                rs[-1, i, 1],
-                color=cores[i],
-                s=30,
-                zorder=3
-            )
-
-        # Ponto central
-        plt.scatter(
-            r0[0, 0],
-            r0[0, 1],
-            c="red",
-            s=100,
-            marker="x",
-            linewidths=2,
-            label="ponto r0"
-        )
-
-        plt.axis("equal")
-        plt.xlabel("x")
-        plt.ylabel("y")
-        plt.title(f"Estabilidade em torno de r0 — Níveis até n = {n}")
-        plt.legend()
-        plt.grid(alpha=0.3)
-
-
-        nome_arquivo = os.path.join(
-            pasta_saida,
-            f"estabilidade_nivel_{n}_em_x{r0[0,0]:.3f}_y{r0[0,1]:.2f}em.png"
-        )
-        plt.savefig(nome_arquivo, dpi=200)
-        plt.close()
-
-        print(f"Imagem salva em: {nome_arquivo}")
-
-r0 = np.array([[.2, -.0]])
-
-testar_estabilidade_2_static(
-    nivel_max=5,
-    N_particulas=50,
-    r0=r0,
-    nivel_min = 1
-)
-
-import numpy as np
-import matplotlib.pyplot as plt
-
-n_max = 2      # níveis do campo
-t0 = 0.0       # instante para congelar o campo
-
-# malha
-N = 300
-x = np.linspace(-R(1), R(1), N)
-y = np.linspace(-R(1), R(1), N)
-
-X, Y = np.meshgrid(x,y)
-
-# campo na malha
-Vx, Vy = campo_total_2(X, Y, t0, n_max)
-Vx2, Vy2 = campo_total_otimo(X,Y, t0, n_max)
-# plot
-plt.figure(figsize=(8,8))
-
-plt.streamplot(
-    X, Y,
-    Vx-Vx2, Vy-Vy2,
-    density=3.0,
-    linewidth=1
-)
-
-plt.xlim(-R(1),R(1))
-plt.ylim(-R(1),R(1))
 plt.axis('equal')
 plt.grid()
+plt.legend()
 plt.show()
+
+
+
