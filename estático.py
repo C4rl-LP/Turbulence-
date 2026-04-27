@@ -66,7 +66,7 @@ def campo_2_com_index(x, y, t, n, index):
     if np.any(mask):
         poten[mask] = (
             2*np.pi
-            * np.exp(0.8 / ((r2[mask] / R2) - 1))
+            * np.exp(0.4 / ((r2[mask] / R2) - 1))
             / fc.T(n)
         )
     vx[mask] = -dy[mask] * poten[mask]
@@ -225,18 +225,25 @@ def campo_total_2_com_index(x, y, t, n_max=3):
             Vy += vy
 
     return Vx, Vy
-
+n = 1
 # Função para simular as partículas.
+x = np.array([-.2, -.201, .1])
+y = np.array([.1, .1, .013])
 
-
-
+a = campo_total_otimo(x, y, 0, n)
+b = campo_total_otimo_vet(x, y, 0, n)
+c = campo_total_2_com_index(x, y , 0, n)
+print(f'campo total otimo:{a}')
+print(f'campo total otimo vetorizado certo:{b}')
+print(f'campo total correto:{c}')
 def testar_estabilidade_2(
     nivel_max,
     
     N_particulas,
     r0,
-    pasta_saida="estabilidade_com_todos_os_pontos",
-    nivel_min = 1
+    pasta_saida="estabilidade_2",
+    nivel_min = 1,
+    funcao = campo_total_otimo
 ):
     """
     Testa a estabilidade do ponto r0 para diferentes números de níveis do campo.
@@ -264,7 +271,7 @@ def testar_estabilidade_2(
             dimensao_quadrado=L,
             r0=r0,
             dt=dt,
-            t_max=t_max, func= campo_total_otimo_vet
+            t_max=t_max, func= funcao
         )
 
         # rs tem shape (Nt, N, 2)
@@ -332,13 +339,16 @@ def testar_estabilidade_2(
 
         print(f"Imagem salva em: {nome_arquivo}")
 
-r0 = np.array([[-.2, .1]])
-
+'''r0 = np.array([[-.2, .1]])
+a= 'estabilidade_2'
+b ='estabilidade_com_todos_os_pontos'
 testar_estabilidade_2(
-    nivel_max=8,
+    nivel_max=7,
     N_particulas=50,
     r0=r0,
-    nivel_min = 8
+    nivel_min = 5,
+    pasta_saida= b,
+    funcao=campo_total_2_com_index
 )
 
-
+'''
