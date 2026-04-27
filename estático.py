@@ -4,11 +4,11 @@ from itertools import product
 
 
 import integradores as it
+import variaveis 
+
 R_1 = 1            # Raio característico do nível 1
 O_1 = 1            # Frequência angular base
 x_1 = np.array([0, 0])  # Centro inicial (nível 1)
-
-# Fator de escala entre frequências dos níveis
 lamb = 2**(2/3)
 
 
@@ -68,11 +68,7 @@ def x_centros(n, index, t):
     # Soma com o centro do nível anterior
     return diff + x_centros(n - 1, index[:-1], t)
 
-def centros_nivel(n, t):
-    """
-    Retorna array (N_centros, 2) com todos os centros do nível n
-    """
-    centros = np.array([x_1])  # nível 1
+
 
 
 def quadrante(dx, dy):
@@ -304,6 +300,120 @@ def centros_por_nivel(x, y, t, n_max):
     print(centros_hist)
     return centros_hist
 
+def centros_por_nivel_vetorizado(x, y, t, n_max):
+    x = np.asarray(x)
+    y = np.asarray(y)
+    centros_hist = []
+
+
+    cx = np.zeros_like(x) 
+    cy = np.zeros_like(y)  # ou x_1
+    centros_hist.append((np.array([cx]), np.array([cy])))
+
+    for n in range(2, n_max + 1):
+
+        dx = x - cx
+        dy = y - cy
+
+        q = quadrante(dx, dy)
+        Rn = R(n)
+
+        # 🔹 centro principal (hierárquico)
+        phi_val = phi(n, np.array([q]))
+        cx_main = cx + np.sqrt(2)*Rn*np.cos(Omega(n)*t + phi_val)
+        cy_main = cy + np.sqrt(2)*Rn*np.sin(Omega(n)*t + phi_val)
+
+        # 🔹 vizinhos geométricos
+        cx_all, cy_all = vizinhos_geometricos(cx_main, cy_main, Rn)
+
+        # 🔹 filtra domínio
+        mask = dentro_do_dominio(cx_all, cy_all, R(1))
+        cx_all = cx_all[mask]
+        cy_all = cy_all[mask]
+
+        centros_hist.append((cx_all, cy_all))
+
+        # 🔹 segue apenas o centro principal
+        cx, cy = cx_main, cy_main
+    print(centros_hist)
+    return centros_hist
+
+def centros_por_nivel_vetorizado(x,y,t,n_max):
+
+    x=np.atleast_1d(x)
+    y=np.atleast_1d(y)
+
+    Np=len(x)
+
+    centros_hist=[]
+
+    cx=np.zeros(Np)
+    cy=np.zeros(Np)
+
+    # nível 1
+    centros_hist.append(
+        [
+         (np.array([cx[i]]),
+          np.array([cy[i]]))
+         for i in range(Np)
+        ]
+    )
+
+    for n in range(2,n_max+1):
+
+        dx=x-cx
+        dy=y-cy
+
+        q=quadrante(dx,dy)
+
+        Rn=R(n)
+
+        phi_val=np.pi/4 + q*np.pi/2
+
+        cx_main = cx + np.sqrt(2)*Rn*np.cos(
+            Omega(n)*t + phi_val
+        )
+
+        cy_main = cy + np.sqrt(2)*Rn*np.sin(
+            Omega(n)*t + phi_val
+        )
+
+        d=2*Rn
+
+        cx_all=np.column_stack([
+            cx_main,
+            cx_main+d,
+            cx_main-d,
+            cx_main,
+            cx_main
+        ])
+
+        cy_all=np.column_stack([
+            cy_main,
+            cy_main,
+            cy_main,
+            cy_main+d,
+            cy_main-d
+        ])
+
+        mask=dentro_do_dominio(cx_all, cy_all, R(1))
+        nivel_centros = [
+            (
+              cx_all[i,mask[i]],
+              cy_all[i,mask[i]]
+            )
+            for i in range(Np)
+        ]
+
+        centros_hist.append(nivel_centros)
+
+        cx=cx_main
+        cy=cy_main
+
+    return centros_hist
+
+a =centros_por_nivel_vetorizado(np.array([.33, -.33, 0.1]), np.array([.33, -.33, 0.1]), 0, 3)
+print(a[2][1])
 def plot_centros(x, y, t, n_max=5):
 
     centros = centros_por_nivel(x, y, t, n_max)
@@ -337,7 +447,7 @@ def simular_particulas_2_static(N, N_fields, dimensao_quadrado, r0, dt=0.01, t_m
     def funcao(t, r):
         x = r[:, 0]
         y = r[:, 1]
-        Vx, Vy = campo_total_otimo(x, y, 0, N_fields)
+        Vx, Vy = campo_total_2(x, y, 0, N_fields)
         return np.column_stack((Vx, Vy))
 
     L = dimensao_quadrado
@@ -390,7 +500,7 @@ def testar_estabilidade_2(
     
     N_particulas,
     r0,
-    pasta_saida="estabilidade_2",
+    pasta_saida="estabilidade_com_todos_os_pontos",
     nivel_min = 1
 ):
     """
@@ -487,13 +597,13 @@ def testar_estabilidade_2(
 
         print(f"Imagem salva em: {nome_arquivo}")
 
-r0 = np.array([[-.2, .1]])
+'''r0 = np.array([[-.2, .1]])
 
 testar_estabilidade_2(
-    nivel_max=20,
+    nivel_max=8,
     N_particulas=50,
     r0=r0,
-    nivel_min = 11
-)
+    nivel_min = 8
+)'''
 
 
