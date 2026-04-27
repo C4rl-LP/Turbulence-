@@ -1,5 +1,7 @@
 import numpy as np 
 
+
+
 def solve_RK4(func, r0, t0, dt, t_max):
     """
     Resolve o sistema dr/dt = func(t, r) usando RK4.
@@ -31,3 +33,38 @@ def solve_RK4(func, r0, t0, dt, t_max):
         t[i+1] = ti + dt
 
     return t, r
+
+def simular_particulas_2_static(N, N_fields, dimensao_quadrado, r0, dt=0.01, t_max=1, func = None):
+    """
+    Simula N partículas em um pequeno quadrado
+    ao redor da posição inicial r0.
+    """
+
+    def funcao(t, r):
+        x = r[:, 0]
+        y = r[:, 1]
+        Vx, Vy = func(x, y, 0, N_fields)
+        return np.column_stack((Vx, Vy))
+
+    L = dimensao_quadrado
+
+    # Distribuição inicial uniforme em um círculo de raio L/2
+    R0 = L / 2
+
+    theta = np.random.uniform(0, 2*np.pi, size=N-1)
+    u = np.random.uniform(0, 1, size=N-1)
+
+    r = R0 * np.sqrt(u)
+
+    dx = r * np.cos(theta)
+    dy = r * np.sin(theta)
+
+    particle_t0 = r0 + np.column_stack((dx, dy))
+
+    # adiciona a partícula central exatamente em r0
+    particle_t0 = np.vstack((r0,particle_t0))
+
+    t, r = solve_RK4(funcao, particle_t0, 0.0, dt, t_max)
+    return t, r
+
+

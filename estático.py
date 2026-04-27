@@ -1,108 +1,16 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from itertools import product
-
-
 import integradores as it
-import variaveis 
-
-R_1 = 1            # Raio característico do nível 1
-O_1 = 1            # Frequência angular base
-x_1 = np.array([0, 0])  # Centro inicial (nível 1)
-lamb = 2**(2/3)
-
-
-
-def indices_nivel(n):
-    """
-    Gera os índices que identificam cada centro no nível n.
-    O número de centros cresce como 4^(n-1).
-    """
-    if n == 1:
-        return [[]]
-    return list(product(range(4), repeat=n-1))
-
-
-def R(n):
-    """ Raio característico do nível n """
-    return R_1 * 2**(1 - n)
-
-
-def Omega(n):
-    """ Frequência angular do nível n """
-    return O_1 * lamb**(n - 1)
-
-
-def T(n):
-    """ Período associado ao nível n """
-    return 2 * np.pi / Omega(n)
-
-
-# ======================================================================
-# GEOMETRIA DOS CENTROS
-# ======================================================================
-
-def phi(n, index):
-    idx = index[-1]  # agora 0,1,2,3
-
-    return np.pi/4 + idx * (np.pi/2)
-
-
-def x_centros(n, index, t):
-    """
-    Calcula recursivamente a posição do centro associado
-    a um índice hierárquico no nível n.
-    """
-    if n == 1:
-        return x_1
-
-    if len(index) != n - 1:
-        raise ValueError("Erro de tamanho de array")
-
-    # Deslocamento circular do centro atual
-    diff = R(n) * np.sqrt(2) * np.array([
-        np.cos(Omega(n) * t + phi(n, index)),
-        np.sin(Omega(n) * t + phi(n, index))
-    ])
-
-    # Soma com o centro do nível anterior
-    return diff + x_centros(n - 1, index[:-1], t)
+import funcoes_para_centros as fc 
+from funcoes_para_centros import R_1, O_1, x_1, lamb
+import os
 
 
 
 
-def quadrante(dx, dy):
-    q = np.zeros_like(dx, dtype=int)
-    q[(dx < 0) & (dy >= 0)] = 1
-    q[(dx < 0) & (dy < 0)] = 2
-    q[(dx >= 0) & (dy < 0)] = 3
-    return q
 
-
-def vizinhos(q):
-    return np.stack([
-        q,
-        (q + 1) % 4,
-        (q - 1) % 4
-    ], axis=1)  # (Np, 3)
-
-
-def atualiza_centro(cx, cy, t, n, idx):
-    """
-    cx, cy: (Np,)
-    idx: (Np,)
-    """
-    Rn = R(n)
-    On = Omega(n)
-
-    phi_val = phi(n, idx)  # precisa aceitar array!
-
-    shift_x = np.sqrt(2)*Rn * np.cos(On*t + phi_val)
-    shift_y = np.sqrt(2)*Rn * np.sin(On*t + phi_val)
-
-    return cx + shift_x, cy + shift_y
-
-
+# Campo base como função dos centros, sem usar o index
 def campo_2(x, y, x_c, y_c,t, n, c= 0.4):
     """
     Campo vetorial induzido por um único centro
@@ -115,7 +23,7 @@ def campo_2(x, y, x_c, y_c,t, n, c= 0.4):
     dx = x - x_c
     dy = y - y_c
     r2 = dx**2 + dy**2
-    R2_coef = np.sqrt(2)*R(n)**2
+    R2_coef = np.sqrt(2)*fc.R(n)**2
 
     vx= np.zeros_like(dx)
     vy = np.zeros_like(dy)
@@ -128,14 +36,45 @@ def campo_2(x, y, x_c, y_c,t, n, c= 0.4):
         poten[mask] = (
             2*np.pi
             * np.exp(c / ((r2[mask] / R2_coef) - 1))
-            / T(n)
+            / fc.T(n)
+        )
+    vx[mask] = -dy[mask] * poten[mask]
+    vy[mask] = dx[mask] * poten[mask]
+
+    return vx, vy
+# Campo base que utiliza os index (CUIDADO COM O VALOR 'c" que está definifo dentro da função)
+def campo_2_com_index(x, y, t, n, index):
+    """
+    Campo vetorial induzido por um único centro
+    do nível n nos pontos (x, y).
+    """
+    x_centro_n = fc.x_centros(n, index, t)
+
+    # Diferenças vetoriais (arrays)
+    dx = x - x_centro_n[0]
+    dy = y - x_centro_n[1]
+    r2 = dx**2 + dy**2
+    R2 = np.sqrt(2)*fc.R(n)**2
+
+    vx= np.zeros_like(dx)
+    vy = np.zeros_like(dy)
+
+    poten = np.zeros_like(r2)
+
+    mask = r2 < R2
+
+    if np.any(mask):
+        poten[mask] = (
+            2*np.pi
+            * np.exp(0.8 / ((r2[mask] / R2) - 1))
+            / fc.T(n)
         )
     vx[mask] = -dy[mask] * poten[mask]
     vy[mask] = dx[mask] * poten[mask]
 
     return vx, vy
 
-
+# Campo total de forma ótima, neste caso ele é vetorizado mas os centros ótimos são baseados num ponto central
 def campo_total_otimo(x, y, t, n_max):
 
     x = np.asarray(x)
@@ -151,24 +90,23 @@ def campo_total_otimo(x, y, t, n_max):
 
     for n in range(2, n_max + 1):
         
-        dx = x - cx
-        dy = y - cy
+  
         # DEfinir dx para encontrar o quadrante
-        q = quadrante(
+        q = fc.quadrante(
             np.array([x[0]-cx]),
             np.array([y[0]-cy])
         )[0]
-        Rn = R(n)
+        Rn = fc.R(n)
 
         
-        phi_val = phi(n, np.array([q]))
-        cx_main = cx + np.sqrt(2)*Rn*np.cos(Omega(n)*t + phi_val)
-        cy_main = cy + np.sqrt(2)*Rn*np.sin(Omega(n)*t + phi_val)
+        phi_val = fc.phi(n, np.array([q]))
+        cx_main = cx + np.sqrt(2)*Rn*np.cos(fc.Omega(n)*t + phi_val)
+        cy_main = cy + np.sqrt(2)*Rn*np.sin(fc.Omega(n)*t + phi_val)
 
 
         # 🔹 vizinhos geométricos
-        cx_all, cy_all = vizinhos_geometricos(cx_main, cy_main, Rn)
-        mask = dentro_do_dominio(cx_all, cy_all, R(1))
+        cx_all, cy_all = fc.vizinhos_geometricos(cx_main, cy_main, Rn)
+        mask = fc.dentro_do_dominio(cx_all, cy_all, fc.R(1))
         cx_all = cx_all[mask]
         cy_all = cy_all[mask]
         for cxi, cyi in zip(cx_all, cy_all):
@@ -180,39 +118,98 @@ def campo_total_otimo(x, y, t, n_max):
 
     return vx, vy 
 
-def campo_2_barra(x, y, t, n, index):
-    """
-    Campo vetorial induzido por um único centro
-    do nível n nos pontos (x, y).
-    """
-    x_centro_n = x_centros(n, index, t)
+# Aqui faz-se a conta com centros ótimos para todos os pontos (Intera sobre Np!!!!)
+def campo_total_otimo_vet(x,y,t,n_max):
 
-    # Diferenças vetoriais (arrays)
-    dx = x - x_centro_n[0]
-    dy = y - x_centro_n[1]
-    r2 = dx**2 + dy**2
-    R2 = np.sqrt(2)*R(n)**2
+    x=np.atleast_1d(x)
+    y=np.atleast_1d(y)
 
-    vx= np.zeros_like(dx)
-    vy = np.zeros_like(dy)
+    vx=np.zeros_like(x,dtype=float)
+    vy=np.zeros_like(y,dtype=float)
 
-    poten = np.zeros_like(r2)
+    cx=0.0
+    cy=0.0
 
-    mask = r2 < R2
+    # nível 1
+    Vx,Vy = campo_2(x,y,cx,cy,t,1)
 
-    if np.any(mask):
-        poten[mask] = (
-            2*np.pi
-            * np.exp(0.8 / ((r2[mask] / R2) - 1))
-            / T(n)
+    vx += Vx
+    vy += Vy
+
+
+    for n in range(2,n_max+1):
+
+        # usa partícula referência para árvore
+        dx=x-cx
+        dy=y-cy
+
+        q=fc.quadrante(dx,dy)
+
+        Rn=fc.R(n)
+
+        phi_val=np.pi/4 + q*np.pi/2
+
+        cx_main = (
+            cx
+            + np.sqrt(2)*Rn*
+            np.cos(fc.Omega(n)*t+phi_val)
         )
-    vx[mask] = -dy[mask] * poten[mask]
-    vy[mask] = dx[mask] * poten[mask]
 
-    return vx, vy
+        cy_main = (
+            cy
+            + np.sqrt(2)*Rn*
+            np.sin(fc.Omega(n)*t+phi_val)
+        )
 
 
-def campo_total_2(x, y, t, n_max=3):
+        cx_all,cy_all = fc.vizinhos_geometricos(
+            cx_main,
+            cy_main,
+            Rn
+        )
+
+        mask=fc.dentro_do_dominio(
+            cx_all,cy_all,fc.R(1)
+        )
+
+        cx_all=cx_all[mask]
+        cy_all=cy_all[mask]
+
+
+        # -------- vetoriza soma dos centros --------
+
+        # shape (Np, Nc)
+        DX = x[:,None] - cx_all[None,:]
+        DY = y[:,None] - cy_all[None,:]
+
+        r2 = DX**2 + DY**2
+
+        R2coef=np.sqrt(2)*Rn**2
+
+        pot=np.zeros_like(r2)
+
+        m = r2 < R2coef
+
+        pot[m]=(
+            2*np.pi
+            *np.exp(
+                0.8/((r2[m]/R2coef)-1)
+            )
+            /fc.T(n)
+        )
+
+        # soma sobre centros
+        vx += np.sum(-DY*pot,axis=1)
+        vy += np.sum( DX*pot,axis=1)
+
+        # ramo principal
+        cx=cx_main
+        cy=cy_main
+
+    return vx,vy
+
+# Campo total usando todos os index e não ótimo
+def campo_total_2_com_index(x, y, t, n_max=3):
     """
     Soma o campo vetorial de todos os níveis
     e todos os centros hierárquicos.
@@ -221,280 +218,18 @@ def campo_total_2(x, y, t, n_max=3):
     Vy = np.zeros_like(y)
     
     for n in range(1, n_max + 1):
-        for idx in indices_nivel(n):
+        for idx in fc.indices_nivel(n):
 
-            vx, vy = campo_2_barra(x, y, t, n, list(idx))
+            vx, vy = campo_2_com_index(x, y, t, n, list(idx))
             Vx += vx
             Vy += vy
 
     return Vx, Vy
 
+# Função para simular as partículas.
 
 
-# Essa função posteriormente deve depender de t, pois os vizinhos mgemétricos mudam no tempo
-def vizinhos_geometricos(cx, cy, Rn):
-    """
-    Retorna:
-    - centro principal
-    - 4 vizinhos geométricos (cima, baixo, esquerda, direita)
-    """
 
-    d = 2 * Rn
-
-    cx_all = np.array([
-        cx,        # centro
-        cx + d,    # direita
-        cx - d,    # esquerda
-        cx,        # cima
-        cx         # baixo
-    ])
-
-    cy_all = np.array([
-        cy,        # centro
-        cy,        # direita
-        cy,        # esquerda
-        cy + d,    # cima
-        cy - d     # baixo
-    ])
-
-    return cx_all, cy_all
-def dentro_do_dominio(cx, cy, R1):
-    return (np.abs(cx) <= R1) & (np.abs(cy) <= R1)
-
-
-
-
-def centros_por_nivel(x, y, t, n_max):
-
-    centros_hist = []
-
-
-    cx, cy = 0.0, 0.0  # ou x_1
-    centros_hist.append((np.array([cx]), np.array([cy])))
-
-    for n in range(2, n_max + 1):
-
-        dx = x - cx
-        dy = y - cy
-
-        q = quadrante(dx, dy)
-        Rn = R(n)
-
-        # 🔹 centro principal (hierárquico)
-        phi_val = phi(n, np.array([q]))
-        cx_main = cx + np.sqrt(2)*Rn*np.cos(Omega(n)*t + phi_val)
-        cy_main = cy + np.sqrt(2)*Rn*np.sin(Omega(n)*t + phi_val)
-
-        # 🔹 vizinhos geométricos
-        cx_all, cy_all = vizinhos_geometricos(cx_main, cy_main, Rn)
-
-        # 🔹 filtra domínio
-        mask = dentro_do_dominio(cx_all, cy_all, R(1))
-        cx_all = cx_all[mask]
-        cy_all = cy_all[mask]
-
-        centros_hist.append((cx_all, cy_all))
-
-        # 🔹 segue apenas o centro principal
-        cx, cy = cx_main, cy_main
-    print(centros_hist)
-    return centros_hist
-
-def centros_por_nivel_vetorizado(x, y, t, n_max):
-    x = np.asarray(x)
-    y = np.asarray(y)
-    centros_hist = []
-
-
-    cx = np.zeros_like(x) 
-    cy = np.zeros_like(y)  # ou x_1
-    centros_hist.append((np.array([cx]), np.array([cy])))
-
-    for n in range(2, n_max + 1):
-
-        dx = x - cx
-        dy = y - cy
-
-        q = quadrante(dx, dy)
-        Rn = R(n)
-
-        # 🔹 centro principal (hierárquico)
-        phi_val = phi(n, np.array([q]))
-        cx_main = cx + np.sqrt(2)*Rn*np.cos(Omega(n)*t + phi_val)
-        cy_main = cy + np.sqrt(2)*Rn*np.sin(Omega(n)*t + phi_val)
-
-        # 🔹 vizinhos geométricos
-        cx_all, cy_all = vizinhos_geometricos(cx_main, cy_main, Rn)
-
-        # 🔹 filtra domínio
-        mask = dentro_do_dominio(cx_all, cy_all, R(1))
-        cx_all = cx_all[mask]
-        cy_all = cy_all[mask]
-
-        centros_hist.append((cx_all, cy_all))
-
-        # 🔹 segue apenas o centro principal
-        cx, cy = cx_main, cy_main
-    print(centros_hist)
-    return centros_hist
-
-def centros_por_nivel_vetorizado(x,y,t,n_max):
-
-    x=np.atleast_1d(x)
-    y=np.atleast_1d(y)
-
-    Np=len(x)
-
-    centros_hist=[]
-
-    cx=np.zeros(Np)
-    cy=np.zeros(Np)
-
-    # nível 1
-    centros_hist.append(
-        [
-         (np.array([cx[i]]),
-          np.array([cy[i]]))
-         for i in range(Np)
-        ]
-    )
-
-    for n in range(2,n_max+1):
-
-        dx=x-cx
-        dy=y-cy
-
-        q=quadrante(dx,dy)
-
-        Rn=R(n)
-
-        phi_val=np.pi/4 + q*np.pi/2
-
-        cx_main = cx + np.sqrt(2)*Rn*np.cos(
-            Omega(n)*t + phi_val
-        )
-
-        cy_main = cy + np.sqrt(2)*Rn*np.sin(
-            Omega(n)*t + phi_val
-        )
-
-        d=2*Rn
-
-        cx_all=np.column_stack([
-            cx_main,
-            cx_main+d,
-            cx_main-d,
-            cx_main,
-            cx_main
-        ])
-
-        cy_all=np.column_stack([
-            cy_main,
-            cy_main,
-            cy_main,
-            cy_main+d,
-            cy_main-d
-        ])
-
-        mask=dentro_do_dominio(cx_all, cy_all, R(1))
-        nivel_centros = [
-            (
-              cx_all[i,mask[i]],
-              cy_all[i,mask[i]]
-            )
-            for i in range(Np)
-        ]
-
-        centros_hist.append(nivel_centros)
-
-        cx=cx_main
-        cy=cy_main
-
-    return centros_hist
-
-a =centros_por_nivel_vetorizado(np.array([.33, -.33, 0.1]), np.array([.33, -.33, 0.1]), 0, 3)
-print(a[2][1])
-def plot_centros(x, y, t, n_max=5):
-
-    centros = centros_por_nivel(x, y, t, n_max)
-
-    import matplotlib.pyplot as plt
-
-    plt.figure(figsize=(6,6))
-    plt.scatter(x, y, c='red', s=100, label='ponto')
-
-    for i, (cx, cy) in enumerate(centros, 1):
-        plt.scatter(cx, cy, label=f'n={i}')
-
-    # domínio
-    R1 = R(1)
-    plt.xlim(-R1, R1)
-    plt.ylim(-R1, R1)
-
-    plt.grid()
-    plt.legend()
-    plt.axis('equal')
-    plt.show()
-
-
-
-def simular_particulas_2_static(N, N_fields, dimensao_quadrado, r0, dt=0.01, t_max=1):
-    """
-    Simula N partículas em um pequeno quadrado
-    ao redor da posição inicial r0.
-    """
-
-    def funcao(t, r):
-        x = r[:, 0]
-        y = r[:, 1]
-        Vx, Vy = campo_total_2(x, y, 0, N_fields)
-        return np.column_stack((Vx, Vy))
-
-    L = dimensao_quadrado
-
-    # Distribuição inicial uniforme em um círculo de raio L/2
-    R0 = L / 2
-
-    theta = np.random.uniform(0, 2*np.pi, size=N-1)
-    u = np.random.uniform(0, 1, size=N-1)
-
-    r = R0 * np.sqrt(u)
-
-    dx = r * np.cos(theta)
-    dy = r * np.sin(theta)
-
-    particle_t0 = r0 + np.column_stack((dx, dy))
-
-    # adiciona a partícula central exatamente em r0
-    particle_t0 = np.vstack((r0,particle_t0))
-
-    t, r = it.solve_RK4(funcao, particle_t0, 0.0, dt, t_max)
-    return t, r
-'''r0 = np.array([-.2, .1])
-n_max = 20
-dt = 0.08 * R(n_max) 
-L = R(n_max)/16
-t_, r_ = simular_particulas_2_static(4, n_max, dimensao_quadrado= L,r0 =r0,  dt =dt , t_max=5 )
-
-traj = r_[:,0,:]
-
-xtraj = traj[:,0]
-ytraj = traj[:,1]
-plt.figure(figsize=(7,7))
-
-plt.plot(xtraj,ytraj,lw=1)
-plt.scatter(*r0,c='red',label='inicial')
-for j in range(r_.shape[1]):
-    plt.plot(r_[:,j,0], r_[:,j,1])
-plt.xlim(-1,1)
-plt.ylim(-1,1)
-
-plt.axis('equal')
-plt.grid()
-plt.legend()
-plt.show()
-'''
-import os
 def testar_estabilidade_2(
     nivel_max,
     
@@ -517,19 +252,19 @@ def testar_estabilidade_2(
 
 
         # Escalas naturais do nível
-        L = R(n)/16         # tamanho da nuvem inicial
-        dt = 0.08 * R(n)             # passo temporal
+        L = fc.R(n)/16         # tamanho da nuvem inicial
+        dt = 0.08 * fc.R(n)             # passo temporal
         t_max = 5         # tempo total (alguns períodos)
 
         print(f"Testando estabilidade para n = {n}")
 
-        ts, rs = simular_particulas_2_static(
+        ts, rs = it.simular_particulas_2_static(
             N=N_particulas,
             N_fields=n,
             dimensao_quadrado=L,
             r0=r0,
             dt=dt,
-            t_max=t_max
+            t_max=t_max, func= campo_total_otimo_vet
         )
 
         # rs tem shape (Nt, N, 2)
@@ -597,13 +332,13 @@ def testar_estabilidade_2(
 
         print(f"Imagem salva em: {nome_arquivo}")
 
-'''r0 = np.array([[-.2, .1]])
+r0 = np.array([[-.2, .1]])
 
 testar_estabilidade_2(
     nivel_max=8,
     N_particulas=50,
     r0=r0,
     nivel_min = 8
-)'''
+)
 
 
