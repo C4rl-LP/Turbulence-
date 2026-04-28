@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 from itertools import product
 
 R_1 = 1            # Raio característico do nível 1
-O_1 = 1            # Frequência angular base
+O_1 = 2*np.pi            # Frequência angular base
 x_1 = np.array([0, 0])  # Centro inicial (nível 1)
 lamb = 2**(2/3)
 
@@ -23,15 +23,16 @@ def R(n):
     """ Raio característico do nível n """
     return R_1 * 2**(1 - n)
 
+def T(n):
+    """ Período associado ao nível n """
+    return 2*np.pi/O_1 * lamb**(-n +1 ) 
 
 def Omega(n):
     """ Frequência angular do nível n """
-    return O_1 * lamb**(n - 1)
+    return O_1 * lamb**(n - 1)   
 
 
-def T(n):
-    """ Período associado ao nível n """
-    return 2 * np.pi / Omega(n)
+
 
 
 # ======================================================================
@@ -239,11 +240,125 @@ def centros_por_nivel_vetorizado(x,y,t,n_max):
 
     return centros_hist
 
+def subcentro(n,cx_0, cy_0,  t):
+    sub_cx = np.zeros(4)
+    sub_cy = np.zeros(4)
+    for i in range(4):
+        phi_i = np.pi/4 + np.pi/2 * i
+        sub_cx[i] =  cx_0 + R(n+1) *np.sqrt(2)*np.cos(Omega(n+1)*t + phi_i )
+        sub_cy[i] =  cy_0 + R(n+1) *np.sqrt(2)*np.sin(Omega(n+1)*t + phi_i )
+    return sub_cx, sub_cy       
+
+def sondar(n, xp, yp, cx_0, cy_0, t):
+    sub_cx, sub_cy = subcentro(n, cx_0, cy_0, t)
+    cx_valid = []
+    cy_valid = []
+    for s_cx_i, s_cy_i in zip(sub_cx, sub_cy):
+        dx = xp - s_cx_i
+        dy = yp - s_cy_i 
+        print(s_cx_i, s_cy_i)
+        print((dx**2 + dy**2))
+        if dx**2 + dy**2 < 2*R(n+1)**2:
+            cx_valid.append(s_cx_i)
+            cy_valid.append(s_cy_i)
+    return cx_valid, cy_valid
+
+def verificar(N, xp, yp, t, x_0, y_0): # x_0, y_0 é  a coordenada do primeiro centro n =1
+    centros = [np.array([x_0, y_0])]
+    centros_vistos =  [np.array([x_0, y_0])]
+    for j in range(1, N):
+        sub = []
+        for r_0k in centros_vistos:
+            valid_x, valid_y = sondar(j, xp,yp, r_0k[0],r_0k[1],t)
+            for cxi,cyi in zip(
+                valid_x,
+                valid_y
+            ):
+                sub.append((cxi,cyi))
+        centros_vistos = sub
+
+        centros.append(sub)
+    return centros
+
+def sondar_vet(n,xp,yp,cx0,cy0,t):
+
+    xp=np.atleast_1d(xp)
+    yp=np.atleast_1d(yp)
+
+    sub_cx,sub_cy = subcentro(
+        n,cx0,cy0,t
+    )
+
+    # (Np,4)
+    dx = xp[:,None]-sub_cx
+    dy = yp[:,None]-sub_cy
+
+    mask = (
+        dx**2+dy**2
+        < 2*R(n+1)**2
+    )
+
+    return sub_cx,sub_cy,mask
+
+def verificar_vet(N,xp,yp,t,x0,y0):
+
+    xp=np.atleast_1d(xp)
+    yp=np.atleast_1d(yp)
+
+    Np=len(xp)
+
+    # para cada partícula:
+    ativos=[
+        [(x0,y0)]
+        for _ in range(Np)
+    ]
+
+    hist=[ativos.copy()]
+
+
+    for n in range(1,N):
+
+        novos=[]
+
+        for p in range(Np):
+            
+            ativos_p=[]
+
+            for cx,cy in ativos[p]:
+
+                sub_cx,sub_cy,mask = sondar_vet(
+                    n,
+                    np.array([xp[p]]),
+                    np.array([yp[p]]),
+                    cx,
+                    cy,
+                    t
+                )
+
+                filhos=list(
+                    zip(
+                      sub_cx[mask[0]],
+                      sub_cy[mask[0]]
+                    )
+                )
+
+                ativos_p.extend(filhos)
+
+            novos.append(ativos_p)
+
+        ativos=novos
+        hist.append(ativos.copy())
+
+    return hist
+
+
+
+
+
 
 if __name__ == "__main__":
 
-    a =centros_por_nivel_vetorizado(np.array([.33, -.33, 0.1]), np.array([.33, -.33, 0.1]), 0, 3)
-    print(a[2][1])
+
     def plot_centros(x, y, t, n_max=5):
 
         centros = centros_por_nivel(x, y, t, n_max)
@@ -265,4 +380,68 @@ if __name__ == "__main__":
         plt.legend()
         plt.axis('equal')
         plt.show()
+    xp=np.array([
+    0.10,
+    0.25,
+    -0.30,
+    0.40
+    ])
 
+    yp=np.array([
+        0.50,
+        0.20,
+        0.10,
+    -0.20
+    ])
+
+    hist=verificar_vet(
+    4,
+    xp,yp,0,
+    0,0
+    )
+    print(hist[0])
+
+    print(1/(lamb*5))
+
+    plt.figure(figsize=(8,8))
+
+    # partículas
+    plt.scatter(
+        xp,yp,
+        c='red',
+        s=70,
+        label='pontos'
+    )
+    cores=['k','b','g','orange','purple','brown']
+    for nivel in range(len(hist)):
+
+        for p in range(len(xp)):
+
+            centros = hist[nivel][p]
+
+            if len(centros)==0:
+                continue
+
+            cx=[c[0] for c in centros]
+            cy=[c[1] for c in centros]
+
+            plt.scatter(
+                cx,
+                cy,
+                s=30,
+                label=None
+            )
+
+            # liga ponto aos centros ativos
+            for cxi,cyi in centros:
+                plt.plot(
+                    [xp[p],cxi],
+                    [yp[p],cyi],
+                    alpha=.25, color=cores[nivel%len(cores)]
+                )
+
+    plt.axis('equal')
+    plt.xlim(-1,1)
+    plt.ylim(-1,1)
+    plt.grid()
+    plt.show()
