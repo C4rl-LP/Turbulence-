@@ -1,5 +1,5 @@
 import time
-import estático as es
+import campos 
 import os
 
 # Comparar tempo dos campos 
@@ -14,19 +14,19 @@ Nrep=100
 t0=time.perf_counter()
 
 for _ in range(Nrep):
-    es.campo_total_podado(
+    campos.campo_total_podado(
         xp,yp,t,nmax
     )
 
 t1=time.perf_counter()
 
 tempo_podado=t1-t0
-print(tempo_podado)
+
 # -------- campo completo ----------
 t0=time.perf_counter()
 
 for _ in range(Nrep):
-    es.campo_total_correto(
+    campos.campo_total_correto(
         xp,yp,t,nmax
     )
 

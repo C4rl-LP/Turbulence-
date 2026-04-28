@@ -3,7 +3,7 @@ import os
 from matplotlib import pyplot as plt
 import funcoes_para_centros as fc
 from funcoes_para_centros import R_1, O_1, lamb, x_1
-
+import time 
 
 def solve_RK4(func, r0, t0, dt, t_max):
     """
@@ -46,7 +46,7 @@ def simular_particulas(N, N_fields, dimensao_quadrado, r0, dt=0.01, t_max=1, fun
     def funcao(t, r):
         x = r[:, 0]
         y = r[:, 1]
-        Vx, Vy = func(x, y, t, N_fields)
+        Vx, Vy = func(x, y, 0, N_fields)
         return np.column_stack((Vx, Vy))
 
     L = dimensao_quadrado
@@ -88,14 +88,14 @@ def testar_estabilidade_2(
     """
 
     os.makedirs(pasta_saida, exist_ok=True)
-
+    
     for n in range(nivel_min, nivel_max + 1):
-
+        t0 = time.perf_counter()
 
         # Escalas naturais do nível
         L = fc.R(n)/16         # tamanho da nuvem inicial
-        dt = 0.08 * fc.R(n)             # passo temporal
-        t_max = 5         # tempo total (alguns períodos)
+        dt = 0.03 * fc.R(n)             # passo temporal
+        t_max = lamb/2        # tempo total (alguns períodos)
 
         print(f"Testando estabilidade para n = {n}")
 
@@ -110,7 +110,7 @@ def testar_estabilidade_2(
 
         # rs tem shape (Nt, N, 2)
         Nt = rs.shape[0]
-
+        t1 = time.perf_counter()
         plt.figure(figsize=(6, 6))
 
 
@@ -170,6 +170,6 @@ def testar_estabilidade_2(
         )
         plt.savefig(nome_arquivo, dpi=200)
         plt.close()
-
+        print(f"Tempo demorado: {t1 - t0}")
         print(f"Imagem salva em: {nome_arquivo}")
 

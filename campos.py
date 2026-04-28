@@ -270,33 +270,37 @@ x = np.array([-.2])
 y = np.array([.1])
 
 
-n = 20
+'''n = 4
 # Função para simular as partículas.
 x = np.array([-.2, -.201, .1])
 y = np.array([.1, .1, .013])
-t = 0
+t = 0.2
 
 a = campo_total_otimo(x, y, t, n)
 b = campo_total_otimo_vet(x, y, t, n)
 d = campo_total_podado(x,y, t, n)
 c = campo_total_correto(x, y , t, n)
-
+t_linspace = np.linspace(0, lamb, 100)
+for i in t_linspace:
+    print(i)
+    c = campo_total_correto(x,y, i, n)
+    d = campo_total_podado(x,y, i, n)
+    print(np.array(c)- np.array(d))
 
 print(f'campo total otimo:{a}')
 print(f'campo total otimo vetorizado certo:{b}')
 print(f'campo total correto:{c}')
-print(f'campo total podado:{d}')
+print(f'campo total podado:{np.array(d)}')
+print(f'subtração do podado: {np.array(d)- np.array(c)}')'''
 
-'''
 r0 = np.array([[-.2, .1]])
-a= 'estabilidade_2'
+a= 'estabilidade_podada'
 b ='estabilidade_com_todos_os_pontos'
 it.testar_estabilidade_2(
-    nivel_max=7,
+    nivel_max=8,
     N_particulas=50,
     r0=r0,
-    nivel_min = 5,
-    pasta_saida= b,
-    funcao=campo_total_correto
+    nivel_min = 1,
+    pasta_saida= a,
+    funcao=campo_total_podado
 )
-'''
