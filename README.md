@@ -10,8 +10,7 @@ Além disso, o modelo, incialmente estático, foi estendido para um modelo tempo
 
 ## Objetivos
 
-- Simular advecção de partículas no campo
-- Estudar estruturas multiescala do modelo
+- Simular partículas no campo
 - Desenvolver otimizações numéricas para o cálculo do campo
 
 ## Modelo 
