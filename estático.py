@@ -209,7 +209,7 @@ def campo_total_otimo_vet(x,y,t,n_max):
     return vx,vy
 
 # Campo total usando todos os index e não ótimo
-def campo_total_2_com_index(x, y, t, n_max=3):
+def campo_total_correto(x, y, t, n_max=3):
     """
     Soma o campo vetorial de todos os níveis
     e todos os centros hierárquicos.
@@ -225,130 +225,78 @@ def campo_total_2_com_index(x, y, t, n_max=3):
             Vy += vy
 
     return Vx, Vy
-n = 1
+def campo_total_podado(xp, yp, t, n_max):
+    """
+    Soma contribuições apenas dos centros
+    encontrados por verificar().
+    """
+    xp=np.atleast_1d(xp)
+    yp=np.atleast_1d(yp)
+    # centro raiz n=1
+    x0,y0 = 0.0,0.0
+    Np = len(xp)
+    # árvore podada
+    centros = fc.verificar_vet(
+        n_max,
+        xp,yp,
+        t,
+        x0,y0
+    )
+
+    vx_total=0.0
+    vy_total=0.0
+
+
+    # nível 1 (raiz)
+    vx,vy = campo_2(
+        xp,yp,
+        x0,y0,
+        t,
+        1
+    )
+
+    vx_total += vx
+    vy_total += vy
+
+    for n in range(2, n_max +1):
+        for j in range(Np):
+            for cx, cy in centros[n-1][j]:
+                vx, vy = campo_2(xp[j], yp[j], cx, cy, t, n)
+                vx_total[j] += vx 
+                vy_total[j] += vy 
+    return vx_total, vy_total
+
+x = np.array([-.2])
+y = np.array([.1])
+
+
+n = 20
 # Função para simular as partículas.
 x = np.array([-.2, -.201, .1])
 y = np.array([.1, .1, .013])
+t = 0
 
-a = campo_total_otimo(x, y, 0, n)
-b = campo_total_otimo_vet(x, y, 0, n)
-c = campo_total_2_com_index(x, y , 0, n)
+a = campo_total_otimo(x, y, t, n)
+b = campo_total_otimo_vet(x, y, t, n)
+d = campo_total_podado(x,y, t, n)
+c = campo_total_correto(x, y , t, n)
+
+
 print(f'campo total otimo:{a}')
 print(f'campo total otimo vetorizado certo:{b}')
 print(f'campo total correto:{c}')
-def testar_estabilidade_2(
-    nivel_max,
-    
-    N_particulas,
-    r0,
-    pasta_saida="estabilidade_2",
-    nivel_min = 1,
-    funcao = campo_total_otimo
-):
-    """
-    Testa a estabilidade do ponto r0 para diferentes números de níveis do campo.
-    Para cada nível n:
-      - simula uma nuvem de partículas ao redor de r0
-      - plota as trajetórias
-      - salva a figura em disco
-    """
+print(f'campo total podado:{d}')
 
-    os.makedirs(pasta_saida, exist_ok=True)
-
-    for n in range(nivel_min, nivel_max + 1):
-
-
-        # Escalas naturais do nível
-        L = fc.R(n)/16         # tamanho da nuvem inicial
-        dt = 0.08 * fc.R(n)             # passo temporal
-        t_max = 5         # tempo total (alguns períodos)
-
-        print(f"Testando estabilidade para n = {n}")
-
-        ts, rs = it.simular_particulas_2_static(
-            N=N_particulas,
-            N_fields=n,
-            dimensao_quadrado=L,
-            r0=r0,
-            dt=dt,
-            t_max=t_max, func= funcao
-        )
-
-        # rs tem shape (Nt, N, 2)
-        Nt = rs.shape[0]
-
-        plt.figure(figsize=(6, 6))
-
-
-        cores = plt.cm.viridis(np.linspace(0, 1, N_particulas))
-
-        for i in range(N_particulas):
-            # Trajetória
-            plt.plot(
-                rs[:, i, 0],
-                rs[:, i, 1],
-                lw=1,
-                alpha=0.4,
-                color=cores[i]
-            )
-
-            # Ponto inicial (vazado)
-            plt.scatter(
-                rs[0, i, 0],
-                rs[0, i, 1],
-                facecolors="none",
-                edgecolors=cores[i],
-                s=30,
-                linewidths=1.5
-            )
-
-            # Ponto final (bem visível)
-            plt.scatter(
-                rs[-1, i, 0],
-                rs[-1, i, 1],
-                color=cores[i],
-                s=30,
-                zorder=3
-            )
-
-        # Ponto central
-        plt.scatter(
-            r0[0, 0],
-            r0[0, 1],
-            c="red",
-            s=100,
-            marker="x",
-            linewidths=2,
-            label="ponto r0"
-        )
-
-        plt.axis("equal")
-        plt.xlabel("x")
-        plt.ylabel("y")
-        plt.title(f"Estabilidade em torno de r0 — Níveis até n = {n}")
-        plt.legend()
-        plt.grid(alpha=0.3)
-
-
-        nome_arquivo = os.path.join(
-            pasta_saida,
-            f"estabilidade_nivel_{n}_em_x{r0[0,0]:.3f}_y{r0[0,1]:.2f}em.png"
-        )
-        plt.savefig(nome_arquivo, dpi=200)
-        plt.close()
-
-        print(f"Imagem salva em: {nome_arquivo}")
-
-'''r0 = np.array([[-.2, .1]])
+'''
+r0 = np.array([[-.2, .1]])
 a= 'estabilidade_2'
 b ='estabilidade_com_todos_os_pontos'
-testar_estabilidade_2(
+it.testar_estabilidade_2(
     nivel_max=7,
     N_particulas=50,
     r0=r0,
     nivel_min = 5,
     pasta_saida= b,
-    funcao=campo_total_2_com_index
+    funcao=campo_total_correto
 )
-
 '''

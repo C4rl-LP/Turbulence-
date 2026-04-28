@@ -356,6 +356,8 @@ def verificar_vet(N,xp,yp,t,x0,y0):
 
 
 
+
+
 if __name__ == "__main__":
 
 
@@ -399,7 +401,7 @@ if __name__ == "__main__":
     xp,yp,0,
     0,0
     )
-    print(hist[0])
+    print(hist[1][0])
 
     print(1/(lamb*5))
 
