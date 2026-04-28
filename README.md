@@ -28,4 +28,4 @@ T_n = T_1 \lambda ^{1 -n }
 $$
 
 
-onde  $\lambda \in (1,2)$ e $R_n$ e $T_n$ são parametros que definem alcance e intensidade do campo, respectivamente. 
+onde  $1<\lambda < 2$ e $R_n$ e $T_n$ são parametros que definem alcance e intensidade do campo, respectivamente. 
