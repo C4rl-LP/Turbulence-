@@ -3,15 +3,12 @@ import matplotlib.pyplot as plt
 from itertools import product
 import integradores as it
 import funcoes_para_centros as fc 
-from funcoes_para_centros import R_1, O_1, x_1, lamb
-import os
-
-
+from funcoes_para_centros import R_1, O_1, x_1, lamb, c_padrao, T_1, alpha_padrao
 
 
 
 # Campo base como função dos centros, sem usar o index
-def campo_2(x, y, x_c, y_c,t, n, c= 0.4):
+def campo_2(x, y, x_c, y_c,t, n, c=c_padrao, alpha = alpha_padrao):
     """
     Campo vetorial induzido por um único centro
     do nível n nos pontos (x, y).
@@ -23,7 +20,7 @@ def campo_2(x, y, x_c, y_c,t, n, c= 0.4):
     dx = x - x_c
     dy = y - y_c
     r2 = dx**2 + dy**2
-    R2_coef = np.sqrt(2)*fc.R(n)**2
+    R2_coef = (fc.R_cufoff(n, alpha))**2
 
     vx= np.zeros_like(dx)
     vy = np.zeros_like(dy)
@@ -43,7 +40,7 @@ def campo_2(x, y, x_c, y_c,t, n, c= 0.4):
 
     return vx, vy
 # Campo base que utiliza os index (CUIDADO COM O VALOR 'c" que está definifo dentro da função)
-def campo_2_com_index(x, y, t, n, index):
+def campo_2_com_index(x, y, t, n, index, c= c_padrao, alpha=alpha_padrao):
     """
     Campo vetorial induzido por um único centro
     do nível n nos pontos (x, y).
@@ -54,7 +51,7 @@ def campo_2_com_index(x, y, t, n, index):
     dx = x - x_centro_n[0]
     dy = y - x_centro_n[1]
     r2 = dx**2 + dy**2
-    R2 = np.sqrt(2)*fc.R(n)**2
+    R2 = (fc.R_cufoff(n, alpha))**2
 
     vx= np.zeros_like(dx)
     vy = np.zeros_like(dy)
@@ -66,14 +63,13 @@ def campo_2_com_index(x, y, t, n, index):
     if np.any(mask):
         poten[mask] = (
             2*np.pi
-            * np.exp(0.4 / ((r2[mask] / R2) - 1))
+            * np.exp(c / ((r2[mask] / R2) - 1))
             / fc.T(n)
         )
     vx[mask] = -dy[mask] * poten[mask]
     vy[mask] = dx[mask] * poten[mask]
 
     return vx, vy
-
 # Campo total de forma ótima, neste caso ele é vetorizado mas os centros ótimos são baseados num ponto central
 def campo_total_otimo(x, y, t, n_max):
 
@@ -117,8 +113,6 @@ def campo_total_otimo(x, y, t, n_max):
         
 
     return vx, vy 
-
-# Aqui faz-se a conta com centros ótimos para todos os pontos (Intera sobre Np!!!!)
 def campo_total_otimo_vet(x,y,t,n_max):
 
     x=np.atleast_1d(x)
@@ -207,7 +201,6 @@ def campo_total_otimo_vet(x,y,t,n_max):
         cy=cy_main
 
     return vx,vy
-
 # Campo total usando todos os index e não ótimo
 def campo_total_correto(x, y, t, n_max=3):
     """
@@ -266,41 +259,64 @@ def campo_total_podado(xp, yp, t, n_max):
                 vy_total[j] += vy 
     return vx_total, vy_total
 
-x = np.array([-.2])
-y = np.array([.1])
+
+if __name__ =="__main__":
+    x = np.array([-.2])
+    y = np.array([.1])
 
 
-'''n = 4
-# Função para simular as partículas.
-x = np.array([-.2, -.201, .1])
-y = np.array([.1, .1, .013])
-t = 0.2
+    '''n = 4
+    # Função para simular as partículas.
+    x = np.array([-.2, -.201, .1])
+    y = np.array([.1, .1, .013])
+    t = 0.2
 
-a = campo_total_otimo(x, y, t, n)
-b = campo_total_otimo_vet(x, y, t, n)
-d = campo_total_podado(x,y, t, n)
-c = campo_total_correto(x, y , t, n)
-t_linspace = np.linspace(0, lamb, 100)
-for i in t_linspace:
-    print(i)
-    c = campo_total_correto(x,y, i, n)
-    d = campo_total_podado(x,y, i, n)
-    print(np.array(c)- np.array(d))
+    a = campo_total_otimo(x, y, t, n)
+    b = campo_total_otimo_vet(x, y, t, n)
+    d = campo_total_podado(x,y, t, n)
+    c = campo_total_correto(x, y , t, n)
+    t_linspace = np.linspace(0, lamb, 100)
+    for i in t_linspace:
+        print(i)
+        c = campo_total_correto(x,y, i, n)
+        d = campo_total_podado(x,y, i, n)
+        print(np.array(c)- np.array(d))
 
-print(f'campo total otimo:{a}')
-print(f'campo total otimo vetorizado certo:{b}')
-print(f'campo total correto:{c}')
-print(f'campo total podado:{np.array(d)}')
-print(f'subtração do podado: {np.array(d)- np.array(c)}')'''
+    print(f'campo total otimo:{a}')
+    print(f'campo total otimo vetorizado certo:{b}')
+    print(f'campo total correto:{c}')
+    print(f'campo total podado:{np.array(d)}')
+    print(f'subtração do podado: {np.array(d)- np.array(c)}')'''
 
-r0 = np.array([[-.2, .1]])
-a= 'estabilidade_podada'
-b ='estabilidade_com_todos_os_pontos'
-it.testar_estabilidade_2(
-    nivel_max=8,
-    N_particulas=50,
-    r0=r0,
-    nivel_min = 1,
-    pasta_saida= a,
-    funcao=campo_total_podado
-)
+    r0 = np.array([[.3, .2333]])
+    a= 'estabilidade_podada'
+    b ='estabilidade_com_todos_os_pontos'
+    it.testar_estabilidade_estatico(
+        nivel_max=8,
+        N_particulas=50,
+        r0=r0,
+        nivel_min = 1,
+        pasta_saida= a,
+        funcao=campo_total_podado
+    )
+
+    c= 'estabilidade_temporal'
+    d ='estabilidade_com_todos_os_pontos_temporal'
+    it.testar_estabilidade_temporal(
+        nivel_max=4,
+        N_particulas=50,
+        r0=r0,
+        nivel_min = 1,
+        pasta_saida= d,
+        funcao=campo_total_correto
+    )
+    it.testar_estabilidade_temporal(
+        nivel_max=4,
+        N_particulas=50,
+        r0=r0,
+        nivel_min = 1,
+        pasta_saida= c,
+        funcao=campo_total_podado
+    )
+
+

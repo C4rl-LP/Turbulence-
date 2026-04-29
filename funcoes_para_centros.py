@@ -6,6 +6,13 @@ R_1 = 1            # Raio característico do nível 1
 O_1 = 2*np.pi            # Frequência angular base
 x_1 = np.array([0, 0])  # Centro inicial (nível 1)
 lamb = 2**(2/3)
+T_1 = 1
+alpha_padrao = np.sqrt(2.5)
+
+
+
+c_padrao = 0.3
+
 
 
 
@@ -25,25 +32,19 @@ def R(n):
 
 def T(n):
     """ Período associado ao nível n """
-    return 2*np.pi/O_1 * lamb**(-n +1 ) 
+    return T_1* lamb**(-n +1 ) 
 
 def Omega(n):
     """ Frequência angular do nível n """
     return O_1 * lamb**(n - 1)   
 
-
-
-
-
-# ======================================================================
-# GEOMETRIA DOS CENTROS
-# ======================================================================
+def R_cufoff(n, alpha = np.sqrt(2)):
+    return alpha*R(n)
 
 def phi(n, index):
-    idx = index[-1]  # agora 0,1,2,3
+    idx = index[-1] 
 
     return np.pi/4 + idx * (np.pi/2)
-
 
 def x_centros(n, index, t):
     """
@@ -257,7 +258,7 @@ def sondar(n, xp, yp, cx_0, cy_0, t):
         dx = xp - s_cx_i
         dy = yp - s_cy_i 
         print(s_cx_i, s_cy_i)
-        print((dx**2 + dy**2))
+        print((dx**2 + dy**2)) # agora 0,1,2,3
         if dx**2 + dy**2 < 2*R(n+1)**2:
             cx_valid.append(s_cx_i)
             cy_valid.append(s_cy_i)
@@ -281,7 +282,7 @@ def verificar(N, xp, yp, t, x_0, y_0): # x_0, y_0 é  a coordenada do primeiro c
     return centros
 
 def sondar_vet(n,xp,yp,cx0,cy0,t):
-
+ # agora 0,1,2,3
     xp=np.atleast_1d(xp)
     yp=np.atleast_1d(yp)
 
@@ -295,7 +296,7 @@ def sondar_vet(n,xp,yp,cx0,cy0,t):
 
     mask = (
         dx**2+dy**2
-        < 2*R(n+1)**2
+        < (R_cufoff(n+1, alpha_padrao))**2
     )
 
     return sub_cx,sub_cy,mask
@@ -350,12 +351,6 @@ def verificar_vet(N,xp,yp,t,x0,y0):
         hist.append(ativos.copy())
 
     return hist
-
-
-
-
-
-
 
 
 if __name__ == "__main__":
