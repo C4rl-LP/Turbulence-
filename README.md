@@ -47,7 +47,7 @@ e^{-\frac{C}{1-x^2}} & \text{se } |x| < 1 \\
 \end{cases}
 $$
 
-$$C > 0$$
+$$C > 0$$ 
 
 ## Distribuições dos centros.
 
@@ -79,5 +79,5 @@ $$
 i \in \{0,1,2,3\}
 $$
 
-O modelo parado segue esta recursão porém com centros fixos e $t=$
+O modelo parado segue esta recursão porém com centros fixos e $t=0$
 
