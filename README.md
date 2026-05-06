@@ -74,7 +74,7 @@ $$
 onde:
 
 $$
-\phi(i)= -\frac{\pi}{4} + \frac{\pi}{2} i,
+\phi(i)= \frac{\pi}{4} + \frac{\pi}{2} i,
 \qquad
 i \in \{0,1,2,3\}
 $$
