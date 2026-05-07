@@ -11,7 +11,7 @@ alpha_padrao = np.sqrt(2.5)
 
 
 
-c_padrao = 0.3
+c_padrao = 0.6
 
 
 

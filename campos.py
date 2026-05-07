@@ -302,21 +302,22 @@ if __name__ =="__main__":
     r0 = np.array([[.3, .2333]])
     c= 'estabilidade_temporal'
     d ='estabilidade_com_todos_os_pontos_temporal'
-    it.testar_estabilidade_temporal(
+    '''it.testar_estabilidade_temporal(
         nivel_max=4,
         N_particulas=50,
         r0=r0,
         nivel_min = 1,
         pasta_saida= d,
         funcao=campo_total_correto
-    )
+    )'''
     it.testar_estabilidade_temporal(
-        nivel_max=4,
-        N_particulas=50,
+        nivel_max=10,
+        N_particulas=1000,
         r0=r0,
         nivel_min = 1,
         pasta_saida= c,
-        funcao=campo_total_podado
+        funcao=campo_total_podado,
+        pasta_saida_info= 'estabilidade_podadda_info'
     )
 
 
