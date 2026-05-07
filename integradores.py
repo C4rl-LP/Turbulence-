@@ -2,7 +2,7 @@ import numpy as np
 import os
 from matplotlib import pyplot as plt
 import funcoes_para_centros as fc
-from funcoes_para_centros import R_1, O_1, lamb, x_1, T_1, alpha_padrao
+from funcoes_para_centros import R_1, O_1, lamb, x_1, T_1, alpha_padrao, c_padrao
 import time 
 
 def solve_RK4(func, r0, t0, dt, t_max):
@@ -182,8 +182,10 @@ def testar_estabilidade_temporal(
     N_particulas,
     r0,
     pasta_saida="estabilidade_2",
+    pasta_saida_info = "estabilidade_podadda_info",
     nivel_min = 1,
-    funcao = None
+    funcao = None,
+    temporal = True
 ):
     """
     Testa a estabilidade do ponto r0 para diferentes números de níveis do campo.
@@ -194,7 +196,8 @@ def testar_estabilidade_temporal(
     """
 
     os.makedirs(pasta_saida, exist_ok=True)
-    
+    os.makedirs(pasta_saida_info, exist_ok=True)
+    nivel_info  = []
     for n in range(nivel_min, nivel_max + 1):
         t0 = time.perf_counter()
 
@@ -211,9 +214,15 @@ def testar_estabilidade_temporal(
             dimensao_quadrado=L,
             r0=r0,
             dt=dt,
-            t_max=t_max, func= funcao, temporal = True 
+            t_max=t_max, func= funcao, temporal = temporal
         )
-
+        rs_final = rs[-1, :, :]
+        mean = np.mean(rs_final, axis=0)
+        var = np.var(rs_final, axis=0, ddof =1 )
+        matriz_covarianca = np.cov(rs_final.T, ddof=1)
+        sigma2_total = np.mean(np.sum((rs_final - mean)**2, axis=1))
+        dic_info = {"Media": mean, "Varianca": var, "Matriz de covariança": matriz_covarianca, "sigma total": sigma2_total}
+        nivel_info.append(dic_info)
         # rs tem shape (Nt, N, 2)
         Nt = rs.shape[0]
         t1 = time.perf_counter()
@@ -278,4 +287,30 @@ def testar_estabilidade_temporal(
         plt.close()
         print(f"Tempo demorado: {t1 - t0}")
         print(f"Imagem salva em: {nome_arquivo}")
+    nome_do_txt_info = os.path.join(pasta_saida_info, "Informações.txt")
+    with open(nome_do_txt_info, "a") as f:
+        f.write('\n')
+        f.write("Carateristicas \n")
+        f.write('\n')
+        f.write(f"R_1 = {R_1}, T_1 = {T_1}, lambda = {lamb} \n")
+        f.write(f"alpha de corte = {alpha_padrao}, Fator c = {c_padrao}\n")
+        f.write(f"r_0 = {r0}, Número de partículas: {N_particulas}\n")
+        f.write("Estatísticas: \n")
+        f.write('\n')
+        for i in range(nivel_min, nivel_max+1):
+            j = i-nivel_min
+            dic =nivel_info[j]
+            f.write(f"Nível: {i}\n")
+            f.write(f"Média: {dic['Media']}, Variança: {dic['Varianca']}\n")
+            cov = dic["Matriz de covariança"]
+            f.write(f"Sigma^2 total  = {dic['sigma total']}")
+            f.write("Matriz de covariância:\n")
+            f.write(
+                f"[[{cov[0,0]:.4e}, {cov[0,1]:.4e}],\n"
+                f" [{cov[1,0]:.4e}, {cov[1,1]:.4e}]]\n"
+            )
+            f.write('\n')
+            
+
+
 

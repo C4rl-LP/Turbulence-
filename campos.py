@@ -288,8 +288,8 @@ if __name__ =="__main__":
     print(f'campo total podado:{np.array(d)}')
     print(f'subtração do podado: {np.array(d)- np.array(c)}')'''
 
-    r0 = np.array([[.3, .2333]])
-    a= 'estabilidade_podada'
+    
+    '''a= 'estabilidade_podada'
     b ='estabilidade_com_todos_os_pontos'
     it.testar_estabilidade_estatico(
         nivel_max=8,
@@ -298,8 +298,8 @@ if __name__ =="__main__":
         nivel_min = 1,
         pasta_saida= a,
         funcao=campo_total_podado
-    )
-
+    )'''
+    r0 = np.array([[.3, .2333]])
     c= 'estabilidade_temporal'
     d ='estabilidade_com_todos_os_pontos_temporal'
     it.testar_estabilidade_temporal(
