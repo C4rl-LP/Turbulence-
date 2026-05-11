@@ -314,7 +314,7 @@ if __name__ =="__main__":
         nivel_max=10,
         N_particulas=1000,
         r0=r0,
-        nivel_min = 8,
+        nivel_min = 1,
         pasta_saida= c,
         funcao=campo_total_podado,
         pasta_saida_info= 'estabilidade_podadda_info'
