@@ -62,3 +62,20 @@ Matriz de covariância:
  [1.1746e-02, 3.0792e-02]]
 
 =-==-==-==-==-==-==-==-==-==-=
+
+
+Carateristicas 
+
+R_1 = 1,       T_1 = 1,     lambda = 1.5874010519681994 
+alpha de corte = 1.5811388300841898, Fator c = 0.6
+r_0 = [[0.3    0.2333]], Número de partículas: 1000
+Estatísticas: 
+
+Nível: 8, Tamanho da núvem incial = 0.00048828125
+Média: [ 0.20010032 -0.09534619], Variança: [0.06559106 0.04591887]
+Sigma^2 raio  = 0.11139841882257881
+Matriz de covariância:
+[[6.5591e-02, 1.1937e-02],
+ [1.1937e-02, 4.5919e-02]]
+
+=-==-==-==-==-==-==-==-==-==-=
