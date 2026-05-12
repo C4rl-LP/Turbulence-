@@ -1,0 +1,80 @@
+
+Carateristicas 
+
+R_1 = 1,       T_1 = 1,     lambda = 1.5874010519681994 
+alpha de corte = 1.5811388300841898, Fator c = 0.6
+r_0 = [[0.3    0.2333]], Número de partículas: 100, Temporal: True
+Estatísticas: 
+
+
+Carateristicas 
+
+R_1 = 1,       T_1 = 1,     lambda = 1.5874010519681994 
+alpha de corte = 1.5811388300841898, Fator c = 0.6
+r_0 = [[0.3    0.2333]], Número de partículas: 100, Temporal: False
+Estatísticas: 
+
+
+Carateristicas 
+
+R_1 = 1,       T_1 = 1,     lambda = 1.5874010519681994 
+alpha de corte = 1.5811388300841898, Fator c = 0.6
+r_0 = [[0.3    0.2333]], Número de partículas: 100, Temporal: False
+Estatísticas: 
+
+Nível: 1, Tamanho da núvem incial = 0.125
+Média: [-0.38317962 -0.03712131], Variança: [0.00107874 0.00086784]
+Sigma^2 raio  = 0.001927111536177059
+Matriz de covariância:
+[[1.0787e-03, -2.2461e-04],
+ [-2.2461e-04, 8.6784e-04]]
+
+=-==-==-==-==-==-==-==-==-==-=
+Nível: 2, Tamanho da núvem incial = 0.0625
+Média: [0.27306657 0.23965704], Variança: [0.00031835 0.00017019]
+Sigma^2 raio  = 0.00048365487173226583
+Matriz de covariância:
+[[3.1835e-04, 3.4969e-05],
+ [3.4969e-05, 1.7019e-04]]
+
+=-==-==-==-==-==-==-==-==-==-=
+Nível: 3, Tamanho da núvem incial = 0.03125
+Média: [0.29357082 0.22872109], Variança: [4.11675625e-05 9.35905817e-05]
+Sigma^2 raio  = 0.00013341056277140043
+Matriz de covariância:
+[[4.1168e-05, 1.7481e-05],
+ [1.7481e-05, 9.3591e-05]]
+
+=-==-==-==-==-==-==-==-==-==-=
+Nível: 4, Tamanho da núvem incial = 0.015625
+Média: [0.31689458 0.32628142], Variança: [0.0015809  0.00329363]
+Sigma^2 raio  = 0.004825785876071812
+Matriz de covariância:
+[[1.5809e-03, -4.2152e-04],
+ [-4.2152e-04, 3.2936e-03]]
+
+=-==-==-==-==-==-==-==-==-==-=
+Nível: 5, Tamanho da núvem incial = 0.0078125
+Média: [0.35584747 0.29534598], Variança: [0.00017543 0.00151626]
+Sigma^2 raio  = 0.0016747720708234436
+Matriz de covariância:
+[[1.7543e-04, 3.8647e-04],
+ [3.8647e-04, 1.5163e-03]]
+
+=-==-==-==-==-==-==-==-==-==-=
+Nível: 6, Tamanho da núvem incial = 0.00390625
+Média: [0.27099418 0.28157515], Variança: [0.00033862 0.0003884 ]
+Sigma^2 raio  = 0.0007197543501882469
+Matriz de covariância:
+[[3.3862e-04, -3.5994e-04],
+ [-3.5994e-04, 3.8840e-04]]
+
+=-==-==-==-==-==-==-==-==-==-=
+Nível: 7, Tamanho da núvem incial = 0.001953125
+Média: [0.30368279 0.23073482], Variança: [0.00023756 0.00074086]
+Sigma^2 raio  = 0.0009686267571551809
+Matriz de covariância:
+[[2.3756e-04, -2.8206e-04],
+ [-2.8206e-04, 7.4086e-04]]
+
+=-==-==-==-==-==-==-==-==-==-=

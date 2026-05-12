@@ -289,8 +289,8 @@ if __name__ =="__main__":
     print(f'subtração do podado: {np.array(d)- np.array(c)}')'''
 
     
-    '''a= 'estabilidade_podada'
-    b ='estabilidade_com_todos_os_pontos'
+    a= 'estabilidade_podada'
+    '''b ='estabilidade_com_todos_os_pontos'
     it.testar_estabilidade_estatico(
         nivel_max=8,
         N_particulas=50,
@@ -310,14 +310,24 @@ if __name__ =="__main__":
         pasta_saida= d,
         funcao=campo_total_correto
     )'''
-    it.testar_estabilidade_temporal(
+    '''it.testar_estabilidade_temporal(
         nivel_max=10,
         N_particulas=1000,
         r0=r0,
-        nivel_min = 8,
+        nivel_min = 1,
         pasta_saida= c,
         funcao=campo_total_podado,
         pasta_saida_info= 'estabilidade_podadda_info'
+    )'''
+    it.testar_estabilidade_temporal(
+        nivel_max=10,
+        N_particulas=100,
+        r0=r0,
+        nivel_min = 1,
+        pasta_saida= a,
+        funcao=campo_total_podado,
+        pasta_saida_info= 'estabilidade_podadda_static_info',
+        temporal= False
     )
 
 

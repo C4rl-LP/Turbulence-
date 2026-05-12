@@ -206,7 +206,7 @@ def testar_estabilidade_temporal(
         f.write('\n')
         f.write(f"R_1 = {R_1},       T_1 = {T_1},     lambda = {lamb} \n")
         f.write(f"alpha de corte = {alpha_padrao}, Fator c = {c_padrao}\n")
-        f.write(f"r_0 = {r0}, Número de partículas: {N_particulas}\n")
+        f.write(f"r_0 = {r0}, Número de partículas: {N_particulas}, Temporal: {temporal}\n")
         f.write("Estatísticas: \n")
         f.write('\n')
         
@@ -216,7 +216,7 @@ def testar_estabilidade_temporal(
         t0 = time.perf_counter()
 
         # Escalas naturais do nível
-        L = fc.R(n)/16         # tamanho da nuvem inicial
+        L = fc.R(n)/8         # tamanho da nuvem inicial
         dt = 0.03 * fc.R(n)             # passo temporal
         t_max = lamb/2        # tempo total (alguns períodos)
 
