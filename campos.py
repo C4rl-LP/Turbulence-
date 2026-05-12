@@ -311,10 +311,10 @@ if __name__ =="__main__":
         funcao=campo_total_correto
     )'''
     it.testar_estabilidade_temporal(
-        nivel_max=10,
-        N_particulas=1000,
+        nivel_max=14,
+        N_particulas=500,
         r0=r0,
-        nivel_min = 1,
+        nivel_min = 9,
         pasta_saida= c,
         funcao=campo_total_podado,
         pasta_saida_info= 'estabilidade_podadda_info'
