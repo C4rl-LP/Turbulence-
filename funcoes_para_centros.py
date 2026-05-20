@@ -66,7 +66,36 @@ def x_centros(n, index, t):
     # Soma com o centro do nível anterior
     return diff + x_centros(n - 1, index[:-1], t)
 
+def centros_nivel_todos(n, t):
+    """
+    Retorna array (N_centros, 2) com todos os centros do nível n
+    """
+    centros = np.array([x_1])  # nível 1
 
+    for k in range(2, n+1):
+
+        Rk = R(k) * np.sqrt(2)
+        angle_base = Omega(k) * t
+
+        # 4 possíveis fases
+        fases = np.array([
+            -np.pi/4,
+             np.pi/4,
+             3*np.pi/4,
+             5*np.pi/4
+        ])
+
+        deslocamentos = Rk * np.column_stack([
+            np.cos(angle_base + fases),
+            np.sin(angle_base + fases)
+        ])
+
+        # Produto cartesiano vetorizado
+        centros = (
+            centros[:, None, :] + deslocamentos[None, :, :]
+        ).reshape(-1, 2)
+
+    return centros
 
 
 
