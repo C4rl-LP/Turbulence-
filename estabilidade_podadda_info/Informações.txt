@@ -94,3 +94,11 @@ Matriz de covariância:
  [9.3760e-03, 4.3155e-02]]
 
 =-==-==-==-==-==-==-==-==-==-=
+
+Carateristicas 
+
+R_1 = 1,       T_1 = 1,     lambda = 1.5874010519681994 
+alpha de corte = 1.5811388300841898, Fator c = 0.6
+r_0 = [[0.3    0.2333]], Número de partículas: 500
+Estatísticas: 
+

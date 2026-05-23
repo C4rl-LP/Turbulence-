@@ -2,19 +2,16 @@ import numpy as np
 import matplotlib.pyplot as plt
 from itertools import product
 
-# ============================================================
-# Constantes globais
-# ============================================================
-
 R_1 = 1            # Raio característico do nível 1
-T_1 = 1             # Período caracterísitoc do nível 1
 O_1 = 2*np.pi            # Frequência angular base
 x_1 = np.array([0, 0])  # Centro inicial (nível 1)
-lamb = 2**(2/3)         # Parâmetro que determina a razão de decaimento do período
+lamb = 2**(2/3)
+T_1 = 1
+alpha_padrao = np.sqrt(2.5)
 
-# Constantes referentes a função bump B(r/[sqrt(alpha_padrao)R_n] ) | B(x) = exp(-1/(1- x²))
-alpha_padrao = np.sqrt(2.5) # Determina o corte da função 
-c_padrao = 0.6              # Determina a incluinação da função     
+
+
+c_padrao = 0.6
 
 
 
@@ -103,6 +100,49 @@ def centros_nivel_todos(n, t):
 
 
 
+def quadrante(dx, dy):
+    q = np.zeros_like(dx, dtype=int)
+    q[(dx < 0) & (dy >= 0)] = 1
+    q[(dx < 0) & (dy < 0)] = 2
+    q[(dx >= 0) & (dy < 0)] = 3
+    return q
+
+
+def vizinhos(q):
+    return np.stack([
+        q,
+        (q + 1) % 4,
+        (q - 1) % 4
+    ], axis=1)  # (Np, 3)
+
+def vizinhos_geometricos(cx, cy, Rn):
+    """
+    Retorna:
+    - centro principal
+    - 4 vizinhos geométricos (cima, baixo, esquerda, direita)
+    """
+
+    d = 2 * Rn
+
+    cx_all = np.array([
+        cx,        # centro
+        cx + d,    # direita
+        cx - d,    # esquerda
+        cx,        # cima
+        cx         # baixo
+    ])
+
+    cy_all = np.array([
+        cy,        # centro
+        cy,        # direita
+        cy,        # esquerda
+        cy + d,    # cima
+        cy - d     # baixo
+    ])
+
+    return cx_all, cy_all
+def dentro_do_dominio(cx, cy, R1):
+    return (np.abs(cx) <= R1) & (np.abs(cy) <= R1)
 def atualiza_centro(cx, cy, t, n, idx):
     """
     cx, cy: (Np,)
@@ -119,6 +159,116 @@ def atualiza_centro(cx, cy, t, n, idx):
     return cx + shift_x, cy + shift_y
 
 
+def centros_por_nivel(x, y, t, n_max):
+
+    centros_hist = []
+
+
+    cx, cy = 0.0, 0.0  # ou x_1
+    centros_hist.append((np.array([cx]), np.array([cy])))
+
+    for n in range(2, n_max + 1):
+
+        dx = x - cx
+        dy = y - cy
+
+        q = quadrante(dx, dy)
+        Rn = R(n)
+
+        # 🔹 centro principal (hierárquico)
+        phi_val = phi(n, np.array([q]))
+        cx_main = cx + np.sqrt(2)*Rn*np.cos(Omega(n)*t + phi_val)
+        cy_main = cy + np.sqrt(2)*Rn*np.sin(Omega(n)*t + phi_val)
+
+        # 🔹 vizinhos geométricos
+        cx_all, cy_all = vizinhos_geometricos(cx_main, cy_main, Rn)
+
+        # 🔹 filtra domínio
+        mask = dentro_do_dominio(cx_all, cy_all, R(1))
+        cx_all = cx_all[mask]
+        cy_all = cy_all[mask]
+
+        centros_hist.append((cx_all, cy_all))
+
+        # 🔹 segue apenas o centro principal
+        cx, cy = cx_main, cy_main
+    print(centros_hist)
+    return centros_hist
+
+
+def centros_por_nivel_vetorizado(x,y,t,n_max):
+
+    x=np.atleast_1d(x)
+    y=np.atleast_1d(y)
+
+    Np=len(x)
+
+    centros_hist=[]
+
+    cx=np.zeros(Np)
+    cy=np.zeros(Np)
+
+    # nível 1
+    centros_hist.append(
+        [
+         (np.array([cx[i]]),
+          np.array([cy[i]]))
+         for i in range(Np)
+        ]
+    )
+
+    for n in range(2,n_max+1):
+
+        dx=x-cx
+        dy=y-cy
+
+        q=quadrante(dx,dy)
+
+        Rn=R(n)
+
+        phi_val=np.pi/4 + q*np.pi/2
+
+        cx_main = cx + np.sqrt(2)*Rn*np.cos(
+            Omega(n)*t + phi_val
+        )
+
+        cy_main = cy + np.sqrt(2)*Rn*np.sin(
+            Omega(n)*t + phi_val
+        )
+
+        d=2*Rn
+
+        cx_all=np.column_stack([
+            cx_main,
+            cx_main+d,
+            cx_main-d,
+            cx_main,
+            cx_main
+        ])
+
+        cy_all=np.column_stack([
+            cy_main,
+            cy_main,
+            cy_main,
+            cy_main+d,
+            cy_main-d
+        ])
+
+        mask=dentro_do_dominio(cx_all, cy_all, R(1))
+        nivel_centros = [
+            (
+              cx_all[i,mask[i]],
+              cy_all[i,mask[i]]
+            )
+            for i in range(Np)
+        ]
+
+        centros_hist.append(nivel_centros)
+
+        cx=cx_main
+        cy=cy_main
+
+    return centros_hist
 
 def subcentro(n,cx_0, cy_0,  t):
     sub_cx = np.zeros(4)
@@ -138,7 +288,7 @@ def sondar(n, xp, yp, cx_0, cy_0, t):
         dy = yp - s_cy_i 
         print(s_cx_i, s_cy_i)
         print((dx**2 + dy**2)) # agora 0,1,2,3
-        if dx**2 + dy**2 < (R_cufoff(n+1, alpha_padrao))**2:
+        if dx**2 + dy**2 < 2*R(n+1)**2:
             cx_valid.append(s_cx_i)
             cy_valid.append(s_cy_i)
     return cx_valid, cy_valid
@@ -233,4 +383,91 @@ def verificar_vet(N,xp,yp,t,x0,y0):
 
 
 if __name__ == "__main__":
-    pass
+
+
+    def plot_centros(x, y, t, n_max=5):
+
+        centros = centros_por_nivel(x, y, t, n_max)
+
+        import matplotlib.pyplot as plt
+
+        plt.figure(figsize=(6,6))
+        plt.scatter(x, y, c='red', s=100, label='ponto')
+
+        for i, (cx, cy) in enumerate(centros, 1):
+            plt.scatter(cx, cy, label=f'n={i}')
+
+        # domínio
+        R1 = R(1)
+        plt.xlim(-R1, R1)
+        plt.ylim(-R1, R1)
+
+        plt.grid()
+        plt.legend()
+        plt.axis('equal')
+        plt.show()
+    xp=np.array([
+    0.10,
+    0.25,
+    -0.30,
+    0.40
+    ])
+
+    yp=np.array([
+        0.50,
+        0.20,
+        0.10,
+    -0.20
+    ])
+
+    hist=verificar_vet(
+    4,
+    xp,yp,0,
+    0,0
+    )
+    print(hist[1][0])
+
+    print(1/(lamb*5))
+
+    plt.figure(figsize=(8,8))
+
+    # partículas
+    plt.scatter(
+        xp,yp,
+        c='red',
+        s=70,
+        label='pontos'
+    )
+    cores=['k','b','g','orange','purple','brown']
+    for nivel in range(len(hist)):
+
+        for p in range(len(xp)):
+
+            centros = hist[nivel][p]
+
+            if len(centros)==0:
+                continue
+
+            cx=[c[0] for c in centros]
+            cy=[c[1] for c in centros]
+
+            plt.scatter(
+                cx,
+                cy,
+                s=30,
+                label=None
+            )
+
+            # liga ponto aos centros ativos
+            for cxi,cyi in centros:
+                plt.plot(
+                    [xp[p],cxi],
+                    [yp[p],cyi],
+                    alpha=.25, color=cores[nivel%len(cores)]
+                )
+
+    plt.axis('equal')
+    plt.xlim(-1,1)
+    plt.ylim(-1,1)
+    plt.grid()
+    plt.show()

@@ -3,29 +3,12 @@ import matplotlib.pyplot as plt
 from itertools import product
 import integradores as it
 import funcoes_para_centros as fc 
-from funcoes_para_centros import (
-    R_1,
-    O_1,
-    x_1,
-    lamb,
-    c_padrao,
-    T_1,
-    alpha_padrao
-)
+from funcoes_para_centros import R_1, O_1, x_1, lamb, c_padrao, T_1, alpha_padrao
+
 
 
 # Campo base como função dos centros, sem usar o index
-
-def campo_2(
-    x: np.ndarray | float,
-    y: np.ndarray | float,
-    x_c: float,
-    y_c: float,
-    t: float,
-    n: int,
-    c: float = c_padrao,
-    alpha: float = alpha_padrao
-    ) -> tuple[np.ndarray, np.ndarray]:
+def campo_2(x, y, x_c, y_c,t, n, c=c_padrao, alpha = alpha_padrao):
     """
     Campo vetorial induzido por um único centro
     do nível n nos pontos (x, y).
@@ -56,17 +39,8 @@ def campo_2(
     vy[mask] = dx[mask] * poten[mask]
 
     return vx, vy
-# Campo base que utiliza os index 
-
-def campo_2_com_index(
-    x: np.ndarray | float,
-    y: np.ndarray | float,
-    t: float,
-    n: int,
-    index: list[int],
-    c: float = c_padrao,
-    alpha: float = alpha_padrao
-    ) -> tuple[np.ndarray, np.ndarray]:
+# Campo base que utiliza os index (CUIDADO COM O VALOR 'c" que está definifo dentro da função)
+def campo_2_com_index(x, y, t, n, index, c= c_padrao, alpha=alpha_padrao):
     """
     Campo vetorial induzido por um único centro
     do nível n nos pontos (x, y).
@@ -96,14 +70,139 @@ def campo_2_com_index(
     vy[mask] = dx[mask] * poten[mask]
 
     return vx, vy
+# Campo total de forma ótima, neste caso ele é vetorizado mas os centros ótimos são baseados num ponto central
+def campo_total_otimo(x, y, t, n_max):
 
+    x = np.asarray(x)
+    y = np.asarray(y)
+
+    cx, cy = 0.0, 0.0  
+    vx = np.zeros_like(x)
+    vy = np.zeros_like(y)
+    V_sum_x, V_sum_y  = campo_2(x,y, cx, cy, 0, 1)
+    vx += V_sum_x
+    vy += V_sum_y
+
+
+    for n in range(2, n_max + 1):
+        
+  
+        # DEfinir dx para encontrar o quadrante
+        q = fc.quadrante(
+            np.array([x[0]-cx]),
+            np.array([y[0]-cy])
+        )[0]
+        Rn = fc.R(n)
+
+        
+        phi_val = fc.phi(n, np.array([q]))
+        cx_main = cx + np.sqrt(2)*Rn*np.cos(fc.Omega(n)*t + phi_val)
+        cy_main = cy + np.sqrt(2)*Rn*np.sin(fc.Omega(n)*t + phi_val)
+
+
+        # 🔹 vizinhos geométricos
+        cx_all, cy_all = fc.vizinhos_geometricos(cx_main, cy_main, Rn)
+        mask = fc.dentro_do_dominio(cx_all, cy_all, fc.R(1))
+        cx_all = cx_all[mask]
+        cy_all = cy_all[mask]
+        for cxi, cyi in zip(cx_all, cy_all):
+            V_sum_x, V_sum_y = campo_2(x,y, cxi, cyi, 0, n)
+            vx += V_sum_x
+            vy += V_sum_y
+        cx, cy = cx_main, cy_main
+        
+
+    return vx, vy 
+def campo_total_otimo_vet(x,y,t,n_max):
+
+    x=np.atleast_1d(x)
+    y=np.atleast_1d(y)
+
+    vx=np.zeros_like(x,dtype=float)
+    vy=np.zeros_like(y,dtype=float)
+
+    cx=0.0
+    cy=0.0
+
+    # nível 1
+    Vx,Vy = campo_2(x,y,cx,cy,t,1)
+
+    vx += Vx
+    vy += Vy
+
+
+    for n in range(2,n_max+1):
+
+        # usa partícula referência para árvore
+        dx=x-cx
+        dy=y-cy
+
+        q=fc.quadrante(dx,dy)
+
+        Rn=fc.R(n)
+
+        phi_val=np.pi/4 + q*np.pi/2
+
+        cx_main = (
+            cx
+            + np.sqrt(2)*Rn*
+            np.cos(fc.Omega(n)*t+phi_val)
+        )
+
+        cy_main = (
+            cy
+            + np.sqrt(2)*Rn*
+            np.sin(fc.Omega(n)*t+phi_val)
+        )
+
+
+        cx_all,cy_all = fc.vizinhos_geometricos(
+            cx_main,
+            cy_main,
+            Rn
+        )
+
+        mask=fc.dentro_do_dominio(
+            cx_all,cy_all,fc.R(1)
+        )
+
+        cx_all=cx_all[mask]
+        cy_all=cy_all[mask]
+
+
+        # -------- vetoriza soma dos centros --------
+
+        # shape (Np, Nc)
+        DX = x[:,None] - cx_all[None,:]
+        DY = y[:,None] - cy_all[None,:]
+
+        r2 = DX**2 + DY**2
+
+        R2coef=np.sqrt(2)*Rn**2
+
+        pot=np.zeros_like(r2)
+
+        m = r2 < R2coef
+
+        pot[m]=(
+            2*np.pi
+            *np.exp(
+                0.8/((r2[m]/R2coef)-1)
+            )
+            /fc.T(n)
+        )
+
+        # soma sobre centros
+        vx += np.sum(-DY*pot,axis=1)
+        vy += np.sum( DX*pot,axis=1)
+
+        # ramo principal
+        cx=cx_main
+        cy=cy_main
+
+    return vx,vy
 # Campo total usando todos os index e não ótimo
-def campo_total_correto(
-    x: np.ndarray,
-    y: np.ndarray,
-    t: float,
-    n_max: int = 3
-    ) -> tuple[np.ndarray, np.ndarray]:
+def campo_total_correto(x, y, t, n_max=3):
     """
     Soma o campo vetorial de todos os níveis
     e todos os centros hierárquicos.
@@ -119,12 +218,7 @@ def campo_total_correto(
             Vy += vy
 
     return Vx, Vy
-def campo_total_podado(
-    xp: np.ndarray | float,
-    yp: np.ndarray | float,
-    t: float,
-    n_max: int = 3
-) -> tuple[np.ndarray, np.ndarray]:
+def campo_total_podado(xp, yp, t, n_max):
     """
     Soma contribuições apenas dos centros
     encontrados por verificar().
