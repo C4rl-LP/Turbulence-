@@ -120,7 +120,14 @@ def plot_campo_e_intensidade(N, t=0.0, L=1.5, x_0=0.0, y_0=0.0, resolucao=200, f
     plt.tight_layout()
     if caminho_salvar:
         import os
-        if os.path.isdir(caminho_salvar):
+        from config import obter_caminho_config
+        
+        if isinstance(caminho_salvar, bool) and caminho_salvar:
+            pasta_dest = obter_caminho_config(subpasta="campos")
+            func_name = func.__name__ if func is not None else "desconhecido"
+            nome_arquivo = f"campo_e_intensidade_nivel_{N:02d}_t{t:.2f}_L{L:.2f}_x0_{x_0:.2f}_y0_{y_0:.2f}_{func_name}.png"
+            caminho_final = os.path.join(pasta_dest, nome_arquivo)
+        elif os.path.isdir(caminho_salvar):
             func_name = func.__name__ if func is not None else "desconhecido"
             nome_arquivo = f"campo_e_intensidade_nivel_{N:02d}_t{t:.2f}_L{L:.2f}_x0_{x_0:.2f}_y0_{y_0:.2f}_{func_name}.png"
             caminho_final = os.path.join(caminho_salvar, nome_arquivo)
@@ -131,7 +138,8 @@ def plot_campo_e_intensidade(N, t=0.0, L=1.5, x_0=0.0, y_0=0.0, resolucao=200, f
             caminho_final = os.path.join(caminho_salvar, nome_arquivo)
         else:
             caminho_final = caminho_salvar
-            os.makedirs(os.path.dirname(caminho_final), exist_ok=True)
+            
+        os.makedirs(os.path.dirname(caminho_final), exist_ok=True)
         plt.savefig(caminho_final, dpi=300)
         print(f"Gráfico salvo em: {caminho_final}")
     else:
@@ -146,9 +154,12 @@ def salvar_por_nivel(
     y_0=.3,
     resolucao=200,
     func=None,
-    pasta="resultados/campos",
+    pasta=None,
     N_min = 1
 ):
+    from config import obter_caminho_config
+    if pasta is None:
+        pasta = obter_caminho_config(subpasta="campos")
 
     import os
     os.makedirs(pasta, exist_ok=True)
@@ -213,8 +224,8 @@ if __name__ == "__main__":
         N_min= 9
     )'''
     plot_campo_e_intensidade(N=3,
-        t=0,
+        t=0.20,
         func=campos.campo_total_podado,
-        resolucao=400
+        resolucao=400, caminho_salvar= True
     )
 

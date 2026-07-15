@@ -83,7 +83,7 @@ def testar_estabilidade_estatico(
     nivel_max,
     N_particulas,
     r0,
-    pasta_saida="resultados/estabilidade/estatico",
+    pasta_saida=None,
     nivel_min = 1,
     funcao = None,
     c = None,
@@ -96,6 +96,9 @@ def testar_estabilidade_estatico(
       - plota as trajetórias
       - salva a figura em disco
     """
+    from config import obter_caminho_config
+    if pasta_saida is None:
+        pasta_saida = obter_caminho_config(alpha, c, subpasta="estabilidade/estatico")
 
     os.makedirs(pasta_saida, exist_ok=True)
     
@@ -192,8 +195,8 @@ def testar_estabilidade_temporal(
     nivel_max,
     N_particulas,
     r0,
-    pasta_saida="resultados/estabilidade/temporal",
-    pasta_saida_info = "resultados/estabilidade/temporal/info",
+    pasta_saida=None,
+    pasta_saida_info = None,
     nivel_min = 1,
     funcao = None,
     temporal = True,
@@ -207,6 +210,11 @@ def testar_estabilidade_temporal(
       - plota as trajetórias
       - salva a figura em disco
     """
+    from config import obter_caminho_config
+    if pasta_saida is None:
+        pasta_saida = obter_caminho_config(alpha, c, subpasta="estabilidade/temporal")
+    if pasta_saida_info is None:
+        pasta_saida_info = obter_caminho_config(alpha, c, subpasta="estabilidade/temporal/info")
     
     os.makedirs(pasta_saida, exist_ok=True)
     os.makedirs(pasta_saida_info, exist_ok=True)

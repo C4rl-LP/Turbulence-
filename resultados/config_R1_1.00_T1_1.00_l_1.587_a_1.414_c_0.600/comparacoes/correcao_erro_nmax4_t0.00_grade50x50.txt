@@ -1,0 +1,13 @@
+Comparacao Podado x Completo
+--------------------------------------------------
+nmax = 4
+t = 0.0
+grade = 50 x 50
+
+Erro absoluto maximo = 0.000000e+00
+Erro absoluto medio  = 0.000000e+00
+Erro RMS             = 0.000000e+00
+Erro relativo maximo = 0.000000e+00
+Erro relativo medio  = 0.000000e+00
+--------------------------------------------------
+

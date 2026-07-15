@@ -176,16 +176,14 @@ def campo_total_podado(
 if __name__ =="__main__":
 
     r0 = np.array([[.3, .2333]])
-    c = 'resultados/estabilidade/temporal_podada'
 
     it.testar_estabilidade_temporal(
         nivel_max=2,
         N_particulas=500,
         r0=r0,
         nivel_min = 1,
-        pasta_saida= c,
         funcao=campo_total_podado,
-        pasta_saida_info= 'resultados/estabilidade/temporal_podada/info'
+    
     )
 
 

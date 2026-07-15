@@ -49,7 +49,8 @@ print(
  tempo_full/tempo_podado
 )
 
-pasta_saida = os.path.join(os.path.dirname(os.path.abspath(__file__)), "resultados", "comparacoes")
+from config import obter_caminho_config
+pasta_saida = obter_caminho_config(subpasta="comparacoes")
 os.makedirs(pasta_saida, exist_ok=True)
 arquivo = os.path.join(pasta_saida, f"temporal_speedup_nmax{nmax}_t{t:.2f}_Nrep{Nrep}.txt")
 
@@ -138,7 +139,8 @@ print(f"Erro relativo médio  = {erro_rel_med:.3e}")
 # Salvar em arquivo
 # ----------------------------
 
-pasta_saida = os.path.join(os.path.dirname(os.path.abspath(__file__)), "resultados", "comparacoes")
+from config import obter_caminho_config
+pasta_saida = obter_caminho_config(subpasta="comparacoes")
 os.makedirs(pasta_saida, exist_ok=True)
 arquivo = os.path.join(pasta_saida, f"correcao_erro_nmax{nmax}_t{t:.2f}_grade{Nx}x{Ny}.txt")
 

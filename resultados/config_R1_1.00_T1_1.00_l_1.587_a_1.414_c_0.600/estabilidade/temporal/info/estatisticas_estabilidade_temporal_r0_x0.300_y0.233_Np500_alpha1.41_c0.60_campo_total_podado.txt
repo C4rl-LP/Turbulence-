@@ -1,0 +1,48 @@
+
+Carateristicas 
+
+R_1 = 1.0,       T_1 = 1.0,     lambda = 1.5874010519681994 
+alpha de corte = 1.4142135623730951, Fator c = 0.6
+r_0 = [[0.3    0.2333]], Número de partículas: 500
+Estatísticas: 
+
+Nível: 1, Tamanho da núvem incial = 0.0625
+Média: [-0.37877638 -0.03303184], Variança: [0.00024324 0.00025371]
+Sigma^2 raio  = 0.0004959502025294024
+Matriz de covariância:
+[[2.4324e-04, -5.9298e-05],
+ [-5.9298e-05, 2.5371e-04]]
+
+=-==-==-==-==-==-==-==-==-==-=
+Nível: 2, Tamanho da núvem incial = 0.03125
+Média: [0.09051875 0.41547058], Variança: [0.00111192 0.00052278]
+Sigma^2 raio  = 0.0016314364513845439
+Matriz de covariância:
+[[1.1119e-03, -7.5051e-04],
+ [-7.5051e-04, 5.2278e-04]]
+
+=-==-==-==-==-==-==-==-==-==-=
+
+Carateristicas 
+
+R_1 = 1.0,       T_1 = 1.0,     lambda = 1.5874010519681994 
+alpha de corte = 1.4142135623730951, Fator c = 0.6
+r_0 = [[0.3    0.2333]], Número de partículas: 500
+Estatísticas: 
+
+Nível: 1, Tamanho da núvem incial = 0.0625
+Média: [-0.37872349 -0.03256302], Variança: [0.00024204 0.0002256 ]
+Sigma^2 raio  = 0.0004667077184003565
+Matriz de covariância:
+[[2.4204e-04, -5.7246e-05],
+ [-5.7246e-05, 2.2560e-04]]
+
+=-==-==-==-==-==-==-==-==-==-=
+Nível: 2, Tamanho da núvem incial = 0.03125
+Média: [0.08842863 0.41678982], Variança: [0.00109841 0.00049399]
+Sigma^2 raio  = 0.001589214656994163
+Matriz de covariância:
+[[1.0984e-03, -7.2554e-04],
+ [-7.2554e-04, 4.9399e-04]]
+
+=-==-==-==-==-==-==-==-==-==-=
