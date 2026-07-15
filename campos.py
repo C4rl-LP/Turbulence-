@@ -179,7 +179,7 @@ if __name__ =="__main__":
 
     it.testar_estabilidade_temporal(
         nivel_max=7,
-        N_particulas=500,
+        N_particulas=250,
         r0=r0,
         nivel_min = 7,
         funcao=campo_total_podado,

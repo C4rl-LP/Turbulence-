@@ -1,0 +1,16 @@
+
+Carateristicas 
+
+R_1 = 1.0,       T_1 = 1.0,     lambda = 1.5874010519681994 
+alpha de corte = 1.4142135623730951, Fator c = 0.7
+r_0 = [[0.3    0.2333]], Número de partículas: 250
+Estatísticas: 
+
+Nível: 7, Tamanho da núvem incial = 0.0009765625
+Média: [ 0.36839823 -0.04166548], Variança: [0.00942599 0.00437998]
+Sigma^2 raio  = 0.013750744213464948
+Matriz de covariância:
+[[9.4260e-03, 4.8658e-03],
+ [4.8658e-03, 4.3800e-03]]
+
+=-==-==-==-==-==-==-==-==-==-=

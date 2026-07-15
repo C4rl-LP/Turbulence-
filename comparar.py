@@ -71,7 +71,7 @@ with open(arquivo, "a") as f:
 # Parâmetros do teste
 # ----------------------------
 '''
-nmax = 4
+nmax = 17
 t = 0.0
 
 Nx = 50

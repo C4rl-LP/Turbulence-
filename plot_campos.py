@@ -212,7 +212,6 @@ if __name__ == "__main__":
     x0 = 0
     y0 = 0
 
-    # Para testar a nova função:
     # plot_campo_e_intensidade(N=3, t=t, L=1.5, x_0=x0, y_0=y0, func=campos.campo_total_podado)
 
     # plot_campo(t=t, N_fields=N, L=1.4,x_0 = x0, y_0 =y0, resolucao=200, func=campos.campo_total_podado)
@@ -228,4 +227,5 @@ if __name__ == "__main__":
         func=campos.campo_total_podado,
         resolucao=400, caminho_salvar= True
     )
-
+   
+    #plot_campo(t =0, N_fields= 17, L=.25, x_0=0.25, y_0= 0.25, func=campos.campo_total_podado)
