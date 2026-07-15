@@ -178,10 +178,10 @@ if __name__ =="__main__":
     r0 = np.array([[.3, .2333]])
 
     it.testar_estabilidade_temporal(
-        nivel_max=2,
+        nivel_max=7,
         N_particulas=500,
         r0=r0,
-        nivel_min = 1,
+        nivel_min = 7,
         funcao=campo_total_podado,
     
     )

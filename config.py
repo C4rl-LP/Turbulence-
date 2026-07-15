@@ -21,7 +21,7 @@ alpha_padrao = np.sqrt(2)
 
 # c: Parâmetro C da função bump. Controla a suavidade e inclinação 
 # do decaimento da velocidade local induzida por cada vórtice/centro.
-c_padrao = 0.6
+c_padrao = 0.7
 
 
 def obter_caminho_config(alpha=None, c=None, subpasta=None):
