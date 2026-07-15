@@ -2,7 +2,7 @@ import numpy as np
 import os
 from matplotlib import pyplot as plt
 import funcoes_para_centros as fc
-from funcoes_para_centros import R_1, O_1, lamb, x_1, T_1, alpha_padrao, c_padrao
+from config import R_1, O_1, lamb, x_1, T_1, alpha_padrao, c_padrao
 import time 
 
 def solve_RK4(func, r0, t0, dt, t_max):
@@ -37,7 +37,7 @@ def solve_RK4(func, r0, t0, dt, t_max):
 
     return t, r
 
-def simular_particulas(N, N_fields, dimensao_quadrado, r0, dt=0.01, t_max=1, func = None, temporal = False):
+def simular_particulas(N, N_fields, dimensao_quadrado, r0, dt=0.01, t_max=1, func = None, temporal = False, c = None, alpha = None):
     """
     Simula N partículas em um pequeno quadrado
     ao redor da posição inicial r0.
@@ -46,10 +46,16 @@ def simular_particulas(N, N_fields, dimensao_quadrado, r0, dt=0.01, t_max=1, fun
     def funcao(t, r):
         x = r[:, 0]
         y = r[:, 1]
+        kwargs = {}
+        if c is not None:
+            kwargs['c'] = c
+        if alpha is not None:
+            kwargs['alpha'] = alpha
+
         if temporal:
-            Vx, Vy = func(x, y, t, N_fields)
+            Vx, Vy = func(x, y, t, N_fields, **kwargs)
         else:
-            Vx, Vy = func(x, y, 0, N_fields)
+            Vx, Vy = func(x, y, 0, N_fields, **kwargs)
         return np.column_stack((Vx, Vy))
 
     L = dimensao_quadrado
@@ -75,12 +81,13 @@ def simular_particulas(N, N_fields, dimensao_quadrado, r0, dt=0.01, t_max=1, fun
 
 def testar_estabilidade_estatico(
     nivel_max,
-    
     N_particulas,
     r0,
-    pasta_saida="estabilidade_2",
+    pasta_saida="resultados/estabilidade/estatico",
     nivel_min = 1,
-    funcao = None
+    funcao = None,
+    c = None,
+    alpha = None
 ):
     """
     Testa a estabilidade do ponto r0 para diferentes números de níveis do campo.
@@ -92,6 +99,10 @@ def testar_estabilidade_estatico(
 
     os.makedirs(pasta_saida, exist_ok=True)
     
+    c_val = c if c is not None else c_padrao
+    alpha_val = alpha if alpha is not None else alpha_padrao
+    func_name = funcao.__name__ if funcao is not None else "desconhecido"
+
     for n in range(nivel_min, nivel_max + 1):
         t0 = time.perf_counter()
 
@@ -100,7 +111,7 @@ def testar_estabilidade_estatico(
         dt = 0.03 * fc.R(n)             # passo temporal
         t_max = lamb/2        # tempo total (alguns períodos)
 
-        print(f"Testando estabilidade para n = {n}")
+        print(f"Testando estabilidade estática para n = {n}")
 
         ts, rs = simular_particulas(
             N=N_particulas,
@@ -108,7 +119,8 @@ def testar_estabilidade_estatico(
             dimensao_quadrado=L,
             r0=r0,
             dt=dt,
-            t_max=t_max, func= funcao
+            t_max=t_max, func= funcao,
+            c=c, alpha=alpha
         )
 
         # rs tem shape (Nt, N, 2)
@@ -162,14 +174,14 @@ def testar_estabilidade_estatico(
         plt.axis("equal")
         plt.xlabel("x")
         plt.ylabel("y")
-        plt.title(f"Estabilidade em torno de r0 — Níveis até n = {n}")
+        plt.title(f"Estabilidade Estática em torno de r0 — Níveis até n = {n}")
         plt.legend()
         plt.grid(alpha=0.3)
 
 
         nome_arquivo = os.path.join(
             pasta_saida,
-            f"estabilidade_nivel_{n}_em_x{r0[0,0]:.3f}_y{r0[0,1]:.2f}em.png"
+            f"estabilidade_estatica_nivel_{n}_r0_x{r0[0,0]:.3f}_y{r0[0,1]:.3f}_Np{N_particulas}_alpha{alpha_val:.2f}_c{c_val:.2f}_{func_name}.png"
         )
         plt.savefig(nome_arquivo, dpi=200)
         plt.close()
@@ -178,14 +190,15 @@ def testar_estabilidade_estatico(
 
 def testar_estabilidade_temporal(
     nivel_max,
-    
     N_particulas,
     r0,
-    pasta_saida="estabilidade_2",
-    pasta_saida_info = "estabilidade_podadda_info",
+    pasta_saida="resultados/estabilidade/temporal",
+    pasta_saida_info = "resultados/estabilidade/temporal/info",
     nivel_min = 1,
     funcao = None,
-    temporal = True
+    temporal = True,
+    c = None,
+    alpha = None
 ):
     """
     Testa a estabilidade do ponto r0 para diferentes números de níveis do campo.
@@ -195,17 +208,24 @@ def testar_estabilidade_temporal(
       - salva a figura em disco
     """
     
-    
-
     os.makedirs(pasta_saida, exist_ok=True)
     os.makedirs(pasta_saida_info, exist_ok=True)
-    nome_do_txt_info = os.path.join(pasta_saida_info, "Informações.txt")
+    
+    c_val = c if c is not None else c_padrao
+    alpha_val = alpha if alpha is not None else alpha_padrao
+    func_name = funcao.__name__ if funcao is not None else "desconhecido"
+    
+    nome_do_txt_info = os.path.join(
+        pasta_saida_info,
+        f"estatisticas_estabilidade_temporal_r0_x{r0[0,0]:.3f}_y{r0[0,1]:.3f}_Np{N_particulas}_alpha{alpha_val:.2f}_c{c_val:.2f}_{func_name}.txt"
+    )
+    
     with open(nome_do_txt_info, "a") as f:
         f.write('\n')
         f.write("Carateristicas \n")
         f.write('\n')
         f.write(f"R_1 = {R_1},       T_1 = {T_1},     lambda = {lamb} \n")
-        f.write(f"alpha de corte = {alpha_padrao}, Fator c = {c_padrao}\n")
+        f.write(f"alpha de corte = {alpha_val}, Fator c = {c_val}\n")
         f.write(f"r_0 = {r0}, Número de partículas: {N_particulas}\n")
         f.write("Estatísticas: \n")
         f.write('\n')
@@ -220,7 +240,7 @@ def testar_estabilidade_temporal(
         dt = 0.03 * fc.R(n)             # passo temporal
         t_max = lamb/2        # tempo total (alguns períodos)
 
-        print(f"Testando estabilidade para n = {n}")
+        print(f"Testando estabilidade temporal para n = {n}")
 
         ts, rs = simular_particulas(
             N=N_particulas,
@@ -228,7 +248,8 @@ def testar_estabilidade_temporal(
             dimensao_quadrado=L,
             r0=r0,
             dt=dt,
-            t_max=t_max, func= funcao, temporal = temporal
+            t_max=t_max, func= funcao, temporal = temporal,
+            c=c, alpha=alpha
         )
         rs_final = rs[-1, :, :]
         mean = np.mean(rs_final, axis=0)
@@ -308,14 +329,14 @@ def testar_estabilidade_temporal(
         plt.axis("equal")
         plt.xlabel("x")
         plt.ylabel("y")
-        plt.title(f"Estabilidade em torno de r0 — Níveis até n = {n}")
+        plt.title(f"Estabilidade Temporal em torno de r0 — Níveis até n = {n}")
         plt.legend()
         plt.grid(alpha=0.3)
 
 
         nome_arquivo = os.path.join(
             pasta_saida,
-            f"estabilidade_nivel_{n}_em_x{r0[0,0]:.3f}_y{r0[0,1]:.2f}em.png"
+            f"estabilidade_temporal_nivel_{n}_r0_x{r0[0,0]:.3f}_y{r0[0,1]:.3f}_Np{N_particulas}_alpha{alpha_val:.2f}_c{c_val:.2f}_{func_name}.png"
         )
         plt.savefig(nome_arquivo, dpi=200)
         plt.close()
@@ -340,11 +361,10 @@ def testar_estabilidade_temporal(
         plt.title(f"Histograma 2D — nível {n}")
 
         plt.axis("equal")
-        plt.legend()
 
         nome_hist = os.path.join(
             pasta_saida_info,
-            f"hist2d_nivel_{n}_x{r0[0,0]:.3f}_y{r0[0,1]:.2f}.png"
+            f"hist2d_temporal_nivel_{n}_r0_x{r0[0,0]:.3f}_y{r0[0,1]:.3f}_Np{N_particulas}_alpha{alpha_val:.2f}_c{c_val:.2f}_{func_name}.png"
         )
 
         plt.savefig(nome_hist, dpi=200)

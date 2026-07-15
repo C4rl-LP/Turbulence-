@@ -49,8 +49,9 @@ print(
  tempo_full/tempo_podado
 )
 
-pasta = os.path.dirname(os.path.abspath(__file__))
-arquivo = os.path.join(pasta,'Teste_temporal.txt')
+pasta_saida = os.path.join(os.path.dirname(os.path.abspath(__file__)), "resultados", "comparacoes")
+os.makedirs(pasta_saida, exist_ok=True)
+arquivo = os.path.join(pasta_saida, f"temporal_speedup_nmax{nmax}_t{t:.2f}_Nrep{Nrep}.txt")
 
 with open(arquivo, "a") as f:
 
@@ -88,18 +89,19 @@ erros_rel = []
 for x in xvals:
     for y in yvals:
 
-        campo_full = campos.campo_total_correto(
+        v_full_x, v_full_y = campos.campo_total_correto(
             x, y, t, nmax
         )
 
-        campo_podado = campos.campo_total_podado(
+        v_pod_x, v_pod_y = campos.campo_total_podado(
             x, y, t, nmax
         )
+        
+        norm_full = np.sqrt(v_full_x**2 + v_full_y**2)
+        erro_abs = np.sqrt((v_full_x - v_pod_x)**2 + (v_full_y - v_pod_y)**2)
 
-        erro_abs = abs(campo_full - campo_podado)
-
-        if abs(campo_full) > 1e-14:
-            erro_rel = erro_abs / abs(campo_full)
+        if norm_full > 1e-14:
+            erro_rel = erro_abs / norm_full
             erros_rel.append(erro_rel)
 
         erros_abs.append(erro_abs)
@@ -136,8 +138,9 @@ print(f"Erro relativo médio  = {erro_rel_med:.3e}")
 # Salvar em arquivo
 # ----------------------------
 
-pasta = os.path.dirname(os.path.abspath(__file__))
-arquivo = os.path.join(pasta, "Teste_correcao.txt")
+pasta_saida = os.path.join(os.path.dirname(os.path.abspath(__file__)), "resultados", "comparacoes")
+os.makedirs(pasta_saida, exist_ok=True)
+arquivo = os.path.join(pasta_saida, f"correcao_erro_nmax{nmax}_t{t:.2f}_grade{Nx}x{Ny}.txt")
 
 with open(arquivo, "a") as f:
 
